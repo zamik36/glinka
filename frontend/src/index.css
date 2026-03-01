@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+body {
+  background-color: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #000000);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  user-select: none; /* Запрет выделения текста как в нативных app */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Стилизация скроллбара */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}

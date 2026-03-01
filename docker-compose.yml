@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: homework_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d homework_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    command: uv run python main_api.py # Запуск через uv-окружение
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/homework_db
+      - BOT_TOKEN=${BOT_TOKEN}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: uv run python app/worker/main.py # Запуск через uv-окружение
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/homework_db
+      - BOT_TOKEN=${BOT_TOKEN}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: 
+      context: ./frontend
+    # В проде фронт собирается (npm run build) и раздается через легковесный nginx внутри контейнера
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data # Сохраняет SSL сертификаты Let's Encrypt
+      - caddy_config:/config
+    depends_on:
+      - api
+      - frontend
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
