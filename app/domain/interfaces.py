@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from app.domain.entities import Task, Reminder
+from app.domain.entities import Task, Reminder, Attachment
 
 class TaskRepository(ABC):
     @abstractmethod
@@ -15,7 +15,7 @@ class ReminderRepository(ABC):
     @abstractmethod
     async def create(self, reminder: Reminder) -> Reminder:
         pass
-    
+
     @abstractmethod
     async def get_pending_and_lock(self, limit: int) -> List[Reminder]:
         """Для HighLoad воркера: берет задачи и блокирует их от других воркеров"""
@@ -23,4 +23,13 @@ class ReminderRepository(ABC):
 
     @abstractmethod
     async def mark_as_sent(self, reminder_id: int) -> None:
-        pass    
+        pass
+
+class AttachmentRepository(ABC):
+    @abstractmethod
+    async def create(self, attachment: Attachment) -> Attachment:
+        pass
+
+    @abstractmethod
+    async def get_by_task(self, task_id: int) -> List[Attachment]:
+        pass

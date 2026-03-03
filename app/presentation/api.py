@@ -1,39 +1,72 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from pydantic import BaseModel
 from datetime import datetime, timezone
-from app.presentation.dependencies import get_current_user, get_task_service
+from typing import Optional
+from app.presentation.dependencies import get_current_user, get_task_service, get_file_storage
 from app.application.task_services import TaskService
+from app.infrastructure.file_storage import FileStorageService
+from app.domain.entities import Attachment
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database import get_db_session
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
 
-class TaskCreateRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=2000)
-    deadline: datetime
+class AttachmentResponse(BaseModel):
+    id: int
+    filename: str
+    mime_type: str
+    size: int
 
 class TaskResponse(BaseModel):
     id: int
     text: str
     deadline: datetime
     is_completed: bool
+    attachments: list[AttachmentResponse] = []
 
 @router.post("")
 async def create_task(
-    request: TaskCreateRequest,
+    text: str = Form(..., min_length=1, max_length=2000),
+    deadline: str = Form(...),
+    files: list[UploadFile] = File(default=[]),
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
-    session: AsyncSession = Depends(get_db_session)
+    file_storage: FileStorageService = Depends(get_file_storage),
+    session: AsyncSession = Depends(get_db_session),
 ):
-    if request.deadline <= datetime.now(timezone.utc):
+    try:
+        deadline_dt = datetime.fromisoformat(deadline)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deadline format")
+
+    if deadline_dt.tzinfo is None:
+        deadline_dt = deadline_dt.replace(tzinfo=timezone.utc)
+
+    if deadline_dt <= datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Deadline must be in the future")
-    task = await service.create_task_with_reminder(user_id, request.text, request.deadline)
+
+    if len(files) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 files allowed")
+
+    attachments: list[Attachment] = []
+    for f in files:
+        if f.filename and f.size is not None:
+            stored_path, size = await file_storage.save(f)
+            attachments.append(Attachment(
+                task_id=0,
+                filename=f.filename,
+                stored_path=stored_path,
+                mime_type=f.content_type or "application/octet-stream",
+                size=size,
+            ))
+
+    task = await service.create_task_with_reminder(user_id, text, deadline_dt, attachments or None)
     await session.commit()
     return {"status": "success", "task_id": task.id}
 
 @router.get("", response_model=list[TaskResponse])
 async def get_tasks(
     user_id: int = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    service: TaskService = Depends(get_task_service),
 ):
     return await service.get_user_tasks(user_id)

@@ -7,7 +7,7 @@ from alembic import context
 from app.core.config import settings
 from app.infrastructure.database import Base
 # Обязательно импортируем модели, чтобы Alembic их "увидел"
-from app.infrastructure.models import TaskModel, ReminderModel 
+from app.infrastructure.models import TaskModel, ReminderModel, AttachmentModel
 
 config = context.config
 if config.config_file_name is not None:

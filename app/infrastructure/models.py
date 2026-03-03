@@ -10,8 +10,8 @@ class TaskModel(Base):
     deadline = Column(DateTime(timezone=True), nullable=False)
     is_completed = Column(Boolean, default=False)
 
-    # Связь с напоминаниями
     reminders = relationship("ReminderModel", back_populates="task", cascade="all, delete-orphan")
+    attachments = relationship("AttachmentModel", back_populates="task", cascade="all, delete-orphan")
 
 class ReminderModel(Base):
     __tablename__ = "reminders"
@@ -20,5 +20,15 @@ class ReminderModel(Base):
     remind_at = Column(DateTime(timezone=True), index=True, nullable=False)
     is_sent = Column(Boolean, default=False, index=True)
 
-    # Связь с задачей
     task = relationship("TaskModel", back_populates="reminders")
+
+class AttachmentModel(Base):
+    __tablename__ = "attachments"
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    filename = Column(String(500), nullable=False)
+    stored_path = Column(String(500), nullable=False)
+    mime_type = Column(String(200), nullable=False)
+    size = Column(Integer, nullable=False)
+
+    task = relationship("TaskModel", back_populates="attachments")

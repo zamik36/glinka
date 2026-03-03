@@ -1,19 +1,21 @@
 from datetime import timedelta, datetime, timezone
-from app.domain.entities import Task, Reminder
-from app.domain.interfaces import TaskRepository, ReminderRepository
+from app.domain.entities import Task, Reminder, Attachment
+from app.domain.interfaces import TaskRepository, ReminderRepository, AttachmentRepository
 
 class TaskService:
-    def __init__(self, task_repo: TaskRepository, reminder_repo: ReminderRepository):
+    def __init__(self, task_repo: TaskRepository, reminder_repo: ReminderRepository, attachment_repo: AttachmentRepository):
         self.task_repo = task_repo
         self.reminder_repo = reminder_repo
+        self.attachment_repo = attachment_repo
 
-    async def create_task_with_reminder(self, user_id: int, text: str, deadline: datetime) -> Task:
+    async def create_task_with_reminder(
+        self, user_id: int, text: str, deadline: datetime, attachments: list[Attachment] | None = None
+    ) -> Task:
         task = Task(user_id=user_id, text=text, deadline=deadline)
         created_task = await self.task_repo.create(task)
 
         now = datetime.now(timezone.utc)
 
-        # Напоминания за 2 дня и за 1 день до дедлайна в 18:00 МСК (15:00 UTC)
         remind_times = []
         for days_before in [2, 1]:
             remind_date = deadline - timedelta(days=days_before)
@@ -23,7 +25,6 @@ class TaskService:
             if remind_dt > now:
                 remind_times.append(remind_dt)
 
-        # Если ни одно время не в будущем — через 5 минут
         if not remind_times:
             remind_times.append(now + timedelta(minutes=5))
 
@@ -31,7 +32,12 @@ class TaskService:
             reminder = Reminder(task_id=created_task.id, remind_at=rt)
             await self.reminder_repo.create(reminder)
 
+        if attachments:
+            for att in attachments:
+                att.task_id = created_task.id
+                await self.attachment_repo.create(att)
+
         return created_task
 
-    async def get_user_tasks(self, user_id: int) -> list[Task]:
+    async def get_user_tasks(self, user_id: int) -> list[dict]:
         return await self.task_repo.get_by_user(user_id)
