@@ -25,11 +25,14 @@ services:
 
   api:
     build: .
-    command: uv run python main_api.py # Запуск через uv-окружение
+    command: uv run python main_api.py
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-pass}@db:5432/${POSTGRES_DB:-homework_db}
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-*}
+      - FILE_STORAGE_DIR=/app/uploads
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -38,10 +41,13 @@ services:
 
   worker:
     build: .
-    command: uv run python -m  app.worker.main # Запуск через uv-окружение
+    command: uv run python -m app.worker.main
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-pass}@db:5432/${POSTGRES_DB:-homework_db}
       - BOT_TOKEN=${BOT_TOKEN}
+      - FILE_STORAGE_DIR=/app/uploads
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -51,7 +57,6 @@ services:
   frontend:
     build:
       context: ./frontend
-    # В проде фронт собирается (npm run build) и раздается через легковесный nginx внутри контейнера
 
   caddy:
     image: caddy:2-alpine
@@ -61,7 +66,7 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data # Сохраняет SSL сертификаты Let's Encrypt
+      - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - api
@@ -71,3 +76,4 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  uploads:

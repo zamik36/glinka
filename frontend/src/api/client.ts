@@ -1,7 +1,6 @@
 import { getTelegramInitData } from '../lib/telegram';
 import type { Task, TaskCreateRequest } from '../types';
 
-// Благодаря Caddy мы шлем запросы на тот же домен, где открыт фронт!
 const API_BASE = '/api';
 
 export class ApiError extends Error {
@@ -25,14 +24,21 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
+  const isFormData = options.body instanceof FormData;
+
+  const headers: Record<string, string> = {
     'initData': getTelegramInitData(),
-    ...options.headers,
   };
 
-  const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-  
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: { ...headers, ...(options.headers as Record<string, string>) },
+  });
+
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new ApiError(response.status, message);
@@ -42,6 +48,18 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
 
 export const api = {
   getTasks: (): Promise<Task[]> => fetchWithAuth('/tasks'),
-  createTask: (data: TaskCreateRequest): Promise<{status: string, task_id: number}> => 
-    fetchWithAuth('/tasks', { method: 'POST', body: JSON.stringify(data) }),
+
+  createTask: (data: TaskCreateRequest): Promise<{ status: string; task_id: number }> => {
+    const formData = new FormData();
+    formData.append('text', data.text);
+    formData.append('deadline', data.deadline);
+
+    if (data.files) {
+      for (const file of data.files) {
+        formData.append('files', file);
+      }
+    }
+
+    return fetchWithAuth('/tasks', { method: 'POST', body: formData });
+  },
 };

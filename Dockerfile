@@ -18,8 +18,10 @@ RUN uv sync --frozen
 # Копируем весь код проекта
 COPY . .
 
-# Создаём non-root пользователя
-RUN useradd --create-home --shell /bin/bash appuser
+# Создаём директорию для загрузок и non-root пользователя
+RUN useradd --create-home --shell /bin/bash appuser \
+    && mkdir -p /app/uploads \
+    && chown -R appuser:appuser /app/uploads
 USER appuser
 
 # Команда по умолчанию (будет переопределена в docker-compose.yml)

@@ -19,3 +19,11 @@ class Reminder(BaseModel):
     task_id: int
     remind_at: datetime
     is_sent: bool = False
+
+class Attachment(BaseModel):
+    id: Optional[int] = None
+    task_id: int
+    filename: str
+    stored_path: str
+    mime_type: str
+    size: int
