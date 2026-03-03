@@ -1,6 +1,5 @@
 export interface Task {
   id: number;
-  user_id: number;
   text: string;
   deadline: string;
   is_completed: boolean;

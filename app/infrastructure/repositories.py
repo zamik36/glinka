@@ -55,6 +55,7 @@ class PostgresReminderRepository(ReminderRepository):
         for reminder, task in rows:
             pending_reminders.append({
                 "reminder_id": reminder.id,
+                "task_id": task.id,
                 "user_id": task.user_id,
                 "text": task.text
             })
@@ -66,5 +67,22 @@ class PostgresReminderRepository(ReminderRepository):
             update(ReminderModel)
             .where(ReminderModel.id == reminder_id)
             .values(is_sent=True)
+        )
+        await self.session.execute(stmt)
+
+    async def has_unsent_reminders(self, task_id: int) -> bool:
+        stmt = (
+            select(func.count())
+            .select_from(ReminderModel)
+            .where(ReminderModel.task_id == task_id, ReminderModel.is_sent == False)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one() > 0
+
+    async def mark_task_completed(self, task_id: int) -> None:
+        stmt = (
+            update(TaskModel)
+            .where(TaskModel.id == task_id)
+            .values(is_completed=True)
         )
         await self.session.execute(stmt)

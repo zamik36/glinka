@@ -6,7 +6,7 @@ class TaskModel(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(BigInteger, index=True, nullable=False)
-    text = Column(String, nullable=False)
+    text = Column(String(2000), nullable=False)
     deadline = Column(DateTime(timezone=True), nullable=False)
     is_completed = Column(Boolean, default=False)
 

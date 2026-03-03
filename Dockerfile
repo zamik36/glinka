@@ -18,5 +18,9 @@ RUN uv sync --frozen
 # Копируем весь код проекта
 COPY . .
 
+# Создаём non-root пользователя
+RUN useradd --create-home --shell /bin/bash appuser
+USER appuser
+
 # Команда по умолчанию (будет переопределена в docker-compose.yml)
 CMD ["uv", "run", "python", "main_api.py"]
