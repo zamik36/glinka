@@ -1,10 +1,16 @@
 :80 {
+    header {
+        X-Content-Type-Options "nosniff"
+        Content-Security-Policy "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
     handle /api/* {
-        reverse_proxy 127.0.0.1:8000
+        reverse_proxy api:8000
     }
 
     handle {
-        reverse_proxy 127.0.0.1:5173
+        reverse_proxy frontend:80
     }
 
     encode zstd gzip

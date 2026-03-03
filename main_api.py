@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.presentation.api import router
 from app.core.config import settings
+from app.infrastructure.database import engine
 
 LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 
@@ -17,19 +18,19 @@ logger = logging.getLogger("app.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
+    await engine.dispose()
 
 app = FastAPI(
-    title="Homework API", 
+    title="Homework API",
     version="1.0.0",
     lifespan=lifespan
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[settings.ALLOWED_ORIGIN],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "initData"],
 )
 
 @app.middleware("http")
@@ -54,7 +55,7 @@ app.include_router(router)
 if __name__ == "__main__":
     from granian import Granian
     from granian.constants import Interfaces
-    
+
     Granian(
         "main_api:app",
         address="0.0.0.0",

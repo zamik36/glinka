@@ -8,5 +8,30 @@ wheels/
 
 # Virtual environments
 .venv
-.env
 uv.lock
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+.claude
+CLAUDE.md
+CHANGES.md

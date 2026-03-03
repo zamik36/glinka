@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from html import escape
 from aiogram import Bot
 from app.core.config import settings
 from app.infrastructure.database import AsyncSessionLocal
@@ -30,12 +31,16 @@ async def process_reminders(bot: Bot) -> int:
             for item in reminders:
                 try:
                     await bot.send_message(
-                        chat_id=item["user_id"], 
-                        text=f"🚨 <b>Напоминание о дедлайне!</b>\n\n📝 Задача: <i>{item['text']}</i>",
+                        chat_id=item["user_id"],
+                        text=f"🚨 <b>Напоминание о дедлайне!</b>\n\n📝 Задача: <i>{escape(item['text'])}</i>",
                         parse_mode="HTML"
                     )
                     await repo.mark_as_sent(item["reminder_id"])
                     processed_count += 1
+
+                    # Если больше нет неотправленных напоминаний — помечаем задачу выполненной
+                    if not await repo.has_unsent_reminders(item["task_id"]):
+                        await repo.mark_task_completed(item["task_id"])
                 except Exception as e:
                     logger.error(f"Failed to send reminder {item['reminder_id']} to {item['user_id']}: {e}")
             

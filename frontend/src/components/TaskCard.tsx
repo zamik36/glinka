@@ -20,7 +20,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           className={task.is_completed ? 'text-green-500' : 'text-yellow-500'}
           aria-label={task.is_completed ? 'completed' : 'pending'}
         >
-          {task.is_completed ? 'Выполнено' : 'В работе'}
+          {task.is_completed ? 'Напоминание отправлено' : 'В работе'}
         </span>
       </div>
     </article>

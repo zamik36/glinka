@@ -1,9 +1,13 @@
 import hashlib
 import hmac
+import time
 import urllib.parse
 import json
+import logging
 from fastapi import HTTPException
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 def validate_telegram_data(init_data: str) -> dict:
     """Проверяет подпись Telegram и возвращает данные пользователя"""
@@ -14,9 +18,14 @@ def validate_telegram_data(init_data: str) -> dict:
         secret_key = hmac.new(b"WebAppData", settings.BOT_TOKEN.encode(), hashlib.sha256).digest()
         calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
-        if calculated_hash != hash_val:
+        if not hmac.compare_digest(calculated_hash, hash_val):
             raise ValueError("Invalid hash")
 
+        auth_date = int(parsed_data.get('auth_date', 0))
+        if abs(time.time() - auth_date) > 300:
+            raise ValueError("initData expired")
+
         return json.loads(parsed_data['user'])
-    except Exception:
+    except Exception as e:
+        logger.warning("initData validation failed: %s", type(e).__name__)
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram initData")
