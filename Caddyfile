@@ -1,4 +1,4 @@
-:80 {
+glinka-ht.ru {
     header {
         X-Content-Type-Options "nosniff"
         Content-Security-Policy "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"
