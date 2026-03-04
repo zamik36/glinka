@@ -8,5 +8,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     ALLOWED_ORIGIN: str = "*"
     FILE_STORAGE_DIR: str = "./uploads"
+    FALLBACK_SYNC_INTERVAL: int = 300
+    WORKER_CONCURRENCY: int = 10
 
 settings = Settings()

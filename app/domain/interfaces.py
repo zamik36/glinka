@@ -25,6 +25,11 @@ class ReminderRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_id_and_lock(self, reminder_id: int) -> dict[str, Any] | None:
+        """Fetch a single unsent reminder with FOR UPDATE SKIP LOCKED."""
+        pass
+
+    @abstractmethod
     async def mark_as_sent(self, reminder_id: int) -> None:
         pass
 
