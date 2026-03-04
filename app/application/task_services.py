@@ -1,4 +1,6 @@
 from datetime import timedelta, datetime, timezone
+from typing import Any
+
 from app.domain.entities import Task, Reminder, Attachment
 from app.domain.interfaces import TaskRepository, ReminderRepository, AttachmentRepository
 
@@ -28,6 +30,8 @@ class TaskService:
         if not remind_times:
             remind_times.append(now + timedelta(minutes=5))
 
+        assert created_task.id is not None
+
         for rt in remind_times:
             reminder = Reminder(task_id=created_task.id, remind_at=rt)
             await self.reminder_repo.create(reminder)
@@ -39,5 +43,5 @@ class TaskService:
 
         return created_task
 
-    async def get_user_tasks(self, user_id: int) -> list[dict]:
+    async def get_user_tasks(self, user_id: int) -> list[dict[str, Any]]:
         return await self.task_repo.get_by_user(user_id)

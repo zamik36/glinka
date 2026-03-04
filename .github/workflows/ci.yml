@@ -45,7 +45,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Type check
-        run: uv run ty check app/ || true
+        run: uv run ty check app/
 
       - name: Run migrations
         run: uv run alembic upgrade head
