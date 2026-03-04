@@ -58,6 +58,28 @@ class PostgresReminderRepository(ReminderRepository):
         self.session.add(db_reminder)
         return reminder
 
+    async def get_by_id_and_lock(self, reminder_id: int) -> dict[str, Any] | None:
+        stmt = (
+            select(ReminderModel, TaskModel)
+            .join(TaskModel, ReminderModel.task_id == TaskModel.id)
+            .where(
+                ReminderModel.id == reminder_id,
+                ReminderModel.is_sent == False,  # noqa: E712
+            )
+            .with_for_update(skip_locked=True, of=ReminderModel)
+        )
+        result = await self.session.execute(stmt)
+        row = result.first()
+        if row is None:
+            return None
+        reminder, task = row
+        return {
+            "reminder_id": reminder.id,
+            "task_id": task.id,
+            "user_id": task.user_id,
+            "text": task.text,
+        }
+
     async def get_pending_and_lock(self, limit: int = 100) -> list[dict[str, Any]]:
         """
         Используем SQLAlchemy ORM для выборки с блокировкой.
