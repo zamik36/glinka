@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { useTelegram } from '../hooks/useTelegram';
+import type { Task } from '../types';
 import { FiUploadCloud, FiX, FiFile, FiCheck } from 'react-icons/fi';
 
 const MAX_FILES = 5;
@@ -16,11 +17,19 @@ const formatSize = (bytes: number): string => {
 type Props = {
   onSuccess: () => void;
   onClose?: () => void;
+  editTask?: Task | null;
 };
 
-export const AddTask: React.FC<Props> = ({ onSuccess, onClose }) => {
-  const [text, setText] = useState('');
-  const [deadline, setDeadline] = useState('');
+const toLocalDatetime = (iso: string): string => {
+  const d = new Date(iso);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+export const AddTask: React.FC<Props> = ({ onSuccess, onClose, editTask }) => {
+  const isEditMode = !!editTask;
+  const [text, setText] = useState(editTask?.text ?? '');
+  const [deadline, setDeadline] = useState(editTask ? toLocalDatetime(editTask.deadline) : '');
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -71,14 +80,18 @@ export const AddTask: React.FC<Props> = ({ onSuccess, onClose }) => {
     try {
       setIsSubmitting(true);
       const utcDate = new Date(deadline).toISOString();
-      await api.createTask({ text, deadline: utcDate, files: files.length > 0 ? files : undefined });
+      if (isEditMode && editTask) {
+        await api.updateTask(editTask.id, { text, deadline: utcDate });
+      } else {
+        await api.createTask({ text, deadline: utcDate, files: files.length > 0 ? files : undefined });
+      }
       hapticFeedback();
       tg.showAlert("Сохранено!");
       onSuccess();
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       tg.showAlert(`Ошибка: ${message}`);
-      console.error('Task create failed:', error);
+      console.error('Task save failed:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -92,8 +105,8 @@ export const AddTask: React.FC<Props> = ({ onSuccess, onClose }) => {
       {/* Title bar */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <span className="text-xl">✏️</span>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Новое задание</h2>
+          <span className="text-xl">{isEditMode ? '✏️' : '✏️'}</span>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{isEditMode ? 'Редактировать' : 'Новое задание'}</h2>
         </div>
         {onClose && (
           <button
@@ -273,7 +286,7 @@ export const AddTask: React.FC<Props> = ({ onSuccess, onClose }) => {
           ) : (
             <>
               <FiCheck className="text-lg" strokeWidth={3} />
-              Сохранить
+              {isEditMode ? 'Обновить' : 'Сохранить'}
             </>
           )}
         </motion.button>

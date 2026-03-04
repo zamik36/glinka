@@ -2,15 +2,17 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow, isPast, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { FiPaperclip, FiClock, FiCheckCircle, FiAlertTriangle } from 'react-icons/fi';
+import { FiPaperclip, FiClock, FiCheckCircle, FiAlertTriangle, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import type { Task } from '../types';
 
 type TaskCardProps = {
   task: Task;
   index: number;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: number) => void;
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelete }) => {
   const deadlineDate = new Date(task.deadline);
   const isOverdue = !task.is_completed && isPast(deadlineDate);
 
@@ -89,6 +91,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 <FiPaperclip className="text-xs" />
                 {attachmentCount}
               </span>
+            )}
+
+            {/* Edit button */}
+            {onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                style={{ background: '#F3F0FF', color: '#6C5CE7' }}
+              >
+                <FiEdit2 className="text-xs" />
+              </button>
+            )}
+
+            {/* Delete button */}
+            {onDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                style={{ background: '#FEF2F2', color: '#EF4444' }}
+              >
+                <FiTrash2 className="text-xs" />
+              </button>
             )}
 
             {/* Status badge */}

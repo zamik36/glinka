@@ -18,3 +18,8 @@ export interface TaskCreateRequest {
   deadline: string;
   files?: File[];
 }
+
+export interface TaskUpdateRequest {
+  text: string;
+  deadline: string;
+}

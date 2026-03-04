@@ -23,6 +23,7 @@ export interface TelegramWebApp {
   expand(): void;
   close(): void;
   showAlert(message: string): void;
+  showConfirm(message: string, callback: (confirmed: boolean) => void): void;
 }
 
 const telegramFallback: TelegramWebApp = {
@@ -34,6 +35,9 @@ const telegramFallback: TelegramWebApp = {
   close: () => undefined,
   showAlert: (message: string) => {
     window.alert(message);
+  },
+  showConfirm: (message: string, callback: (confirmed: boolean) => void) => {
+    callback(window.confirm(message));
   },
 };
 

@@ -4,10 +4,12 @@ import { useTelegram } from './hooks/useTelegram';
 import { TaskList } from './pages/TaskList';
 import { AddTask } from './pages/AddTask';
 import { FiPlus } from 'react-icons/fi';
+import type { Task } from './types';
 
 const App: React.FC = () => {
   const { tg, expandApp } = useTelegram();
   const [showAddTask, setShowAddTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -17,7 +19,18 @@ const App: React.FC = () => {
 
   const handleTaskCreated = useCallback(() => {
     setShowAddTask(false);
+    setEditingTask(null);
     setRefreshKey(k => k + 1);
+  }, []);
+
+  const handleEdit = useCallback((task: Task) => {
+    setEditingTask(task);
+    setShowAddTask(true);
+  }, []);
+
+  const handleSheetClose = useCallback(() => {
+    setShowAddTask(false);
+    setEditingTask(null);
   }, []);
 
   return (
@@ -48,7 +61,7 @@ const App: React.FC = () => {
 
       {/* Main content */}
       <main className="relative z-10 px-4 pb-28">
-        <TaskList key={refreshKey} />
+        <TaskList key={refreshKey} onEdit={handleEdit} />
       </main>
 
       {/* FAB — hidden when bottom sheet is open */}
@@ -59,7 +72,7 @@ const App: React.FC = () => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            onClick={() => setShowAddTask(true)}
+            onClick={() => { setEditingTask(null); setShowAddTask(true); }}
             className="fixed bottom-6 right-6 z-30 w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
             style={{
               background: 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))',
@@ -84,7 +97,7 @@ const App: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
-              onClick={() => setShowAddTask(false)}
+              onClick={handleSheetClose}
             />
             <motion.div
               className="fixed bottom-0 left-0 right-0 z-50 max-h-[92vh] overflow-y-auto"
@@ -104,8 +117,10 @@ const App: React.FC = () => {
                 <div className="w-10 h-1.5 rounded-full" style={{ background: 'var(--accent-soft)' }} />
               </div>
               <AddTask
+                key={editingTask?.id ?? 'new'}
                 onSuccess={handleTaskCreated}
-                onClose={() => setShowAddTask(false)}
+                onClose={handleSheetClose}
+                editTask={editingTask}
               />
             </motion.div>
           </>

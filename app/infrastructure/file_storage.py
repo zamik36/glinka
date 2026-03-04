@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 import aiofiles
@@ -30,3 +31,10 @@ class FileStorageService:
 
     def get_full_path(self, stored_path: str) -> str:
         return os.path.join(self.storage_dir, stored_path)
+
+    def delete(self, stored_path: str) -> None:
+        full_path = os.path.join(self.storage_dir, stored_path)
+        try:
+            os.remove(full_path)
+        except OSError:
+            logging.getLogger(__name__).warning("Failed to delete file: %s", full_path)

@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import type { Task } from '../types';
 import { TaskCard } from '../components/TaskCard';
 import { FiBookOpen } from 'react-icons/fi';
 import { isPast } from 'date-fns';
+import { useTelegram } from '../hooks/useTelegram';
 
 const SkeletonCard: React.FC = () => (
   <div className="card mb-3 p-4">
@@ -17,9 +18,14 @@ const SkeletonCard: React.FC = () => (
   </div>
 );
 
-export const TaskList: React.FC = () => {
+type TaskListProps = {
+  onEdit?: (task: Task) => void;
+};
+
+export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { tg, hapticFeedback } = useTelegram();
 
   const loadTasks = async () => {
     try {
@@ -35,6 +41,20 @@ export const TaskList: React.FC = () => {
   useEffect(() => {
     loadTasks();
   }, []);
+
+  const handleDelete = useCallback((taskId: number) => {
+    tg.showConfirm('Удалить задание?', async (confirmed: boolean) => {
+      if (!confirmed) return;
+      try {
+        await api.deleteTask(taskId);
+        hapticFeedback();
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+      } catch (error) {
+        console.error('Delete failed:', error);
+        tg.showAlert('Ошибка при удалении');
+      }
+    });
+  }, [tg, hapticFeedback]);
 
   const overdueCount = tasks.filter(t => !t.is_completed && isPast(new Date(t.deadline))).length;
   const activeCount = tasks.filter(t => !t.is_completed).length;
@@ -107,9 +127,11 @@ export const TaskList: React.FC = () => {
         </motion.div>
       ) : (
         <div>
-          {tasks.map((task, i) => (
-            <TaskCard key={task.id} task={task} index={i} />
-          ))}
+          <AnimatePresence>
+            {tasks.map((task, i) => (
+              <TaskCard key={task.id} task={task} index={i} onEdit={onEdit} onDelete={handleDelete} />
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>
