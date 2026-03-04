@@ -86,23 +86,14 @@ async def _process_loop(
                         scheduler.mark_processed(reminder_id)
                         return
 
-                    remind_at_dt = item.get("remind_at")
                     attachments = await repo.get_attachments_for_task(item["task_id"])
                     await send_reminder_with_attachments(bot, item["user_id"], item["text"], attachments)
                     await repo.mark_as_sent(item["reminder_id"])
-
-                    if not await repo.has_unsent_reminders(item["task_id"]):
-                        await repo.mark_task_completed(item["task_id"])
-
                     await session.commit()
                     scheduler.mark_processed(reminder_id)
 
-                    # Fix 9: логирование латентности
-                    if remind_at_dt is not None:
-                        latency = (datetime.now(timezone.utc) - remind_at_dt).total_seconds()
-                        logger.info("Sent reminder %d to user %d (latency=%.1fs)", reminder_id, item["user_id"], latency)
-                    else:
-                        logger.info("Sent reminder %d to user %d", reminder_id, item["user_id"])
+                    latency = (datetime.now(timezone.utc) - item["remind_at"]).total_seconds()
+                    logger.info("Sent reminder %d to user %d (latency=%.1fs)", reminder_id, item["user_id"], latency)
 
                 except Exception as e:
                     await session.rollback()

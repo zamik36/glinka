@@ -10,6 +10,8 @@ from app.core.config import settings
 
 logger = logging.getLogger("app.api.auth")
 
+_file_storage = FileStorageService()
+
 async def get_current_user(initData: str = Header(default="", alias="initData")) -> int:
     if not initData:
         if settings.DEBUG:
@@ -19,12 +21,14 @@ async def get_current_user(initData: str = Header(default="", alias="initData"))
     user_data = validate_telegram_data(initData)
     return user_data["id"]
 
-async def get_task_service(session: AsyncSession = Depends(get_db_session)) -> TaskService:
+def get_file_storage() -> FileStorageService:
+    return _file_storage
+
+async def get_task_service(
+    session: AsyncSession = Depends(get_db_session),
+    file_storage: FileStorageService = Depends(get_file_storage),
+) -> TaskService:
     task_repo = PostgresTaskRepository(session)
     reminder_repo = PostgresReminderRepository(session)
     attachment_repo = PostgresAttachmentRepository(session)
-    file_storage = FileStorageService()
     return TaskService(task_repo, reminder_repo, attachment_repo, file_storage)
-
-def get_file_storage() -> FileStorageService:
-    return FileStorageService()

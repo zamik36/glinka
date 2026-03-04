@@ -26,10 +26,11 @@ services:
   api:
     build: .
     command: uv run python main_api.py
+    restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-pass}@db:5432/${POSTGRES_DB:-homework_db}
       - BOT_TOKEN=${BOT_TOKEN}
-      - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-*}
+      - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-https://glinka-ht.ru}
       - FILE_STORAGE_DIR=/app/uploads
     volumes:
       - uploads:/app/uploads
@@ -42,6 +43,7 @@ services:
   worker:
     build: .
     command: uv run python -m app.worker.main
+    restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-pass}@db:5432/${POSTGRES_DB:-homework_db}
       - BOT_TOKEN=${BOT_TOKEN}
@@ -57,6 +59,7 @@ services:
   frontend:
     build:
       context: ./frontend
+    restart: unless-stopped
 
   caddy:
     image: caddy:2-alpine

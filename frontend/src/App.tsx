@@ -35,10 +35,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen relative" style={{ background: 'var(--surface)' }}>
-      {/* Decorative background blobs */}
-      <div className="bg-blob animate-blob" style={{ width: 300, height: 300, background: '#6C5CE7', top: -80, right: -60 }} />
-      <div className="bg-blob animate-blob" style={{ width: 250, height: 250, background: '#A29BFE', bottom: 100, left: -80, animationDelay: '-3s' }} />
-      <div className="bg-blob animate-blob" style={{ width: 200, height: 200, background: '#DDD6FE', top: '40%', right: -40, animationDelay: '-5s' }} />
+      {/* Decorative background blobs — visible through Liquid Glass cards */}
+      <div className="bg-blob animate-blob" style={{ width: 320, height: 320, background: '#6C5CE7', top: -90, right: -70 }} />
+      <div className="bg-blob animate-blob" style={{ width: 260, height: 260, background: '#A29BFE', bottom: 80, left: -90, animationDelay: '-3s' }} />
+      <div className="bg-blob animate-blob" style={{ width: 220, height: 220, background: '#C4B5FD', top: '38%', right: -50, animationDelay: '-5s' }} />
+      <div className="bg-blob animate-blob" style={{ width: 180, height: 180, background: '#818CF8', bottom: '30%', left: '30%', animationDelay: '-7s', opacity: 0.15 }} />
 
       {/* Header */}
       <header className="relative z-10 pt-6 pb-4 px-5">

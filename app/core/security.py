@@ -25,7 +25,13 @@ def validate_telegram_data(init_data: str) -> dict:
         if abs(time.time() - auth_date) > 300:
             raise ValueError("initData expired")
 
-        return json.loads(parsed_data['user'])
+        user_json = parsed_data.get('user')
+        if not user_json:
+            raise ValueError("Missing 'user' field in initData")
+        return json.loads(user_json)
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("initData validation failed: %s: %s", type(e).__name__, e)
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram initData")
     except Exception as e:
-        logger.warning("initData validation failed: %s", type(e).__name__)
+        logger.warning("initData validation failed unexpectedly: %s", type(e).__name__)
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram initData")

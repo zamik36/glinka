@@ -69,6 +69,7 @@ jobs:
           script: |
             cd ${{ secrets.VPS_PROJECT_PATH }}
             git pull origin main
-            docker compose up -d --build
-            sleep 10
-            curl -f http://localhost/api/docs || exit 1
+            docker compose build
+            docker compose run --rm migrate
+            docker compose up -d
+            curl -f --retry 10 --retry-delay 3 --retry-connrefused http://localhost/api/docs || exit 1
