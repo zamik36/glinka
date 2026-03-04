@@ -49,18 +49,6 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
   const { tg, hapticFeedback } = useTelegram();
 
   const loadTasks = async () => {
-    // DEV MOCK — удали этот блок перед коммитом
-    if (import.meta.env.DEV) {
-      const now = new Date();
-      setTasks([
-        { id: 1, text: 'Сдать реферат по физике', deadline: new Date(now.getTime() + 2 * 60 * 1000).toISOString(), is_completed: false },
-        { id: 2, text: 'Подготовиться к контрольной по математике', deadline: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(), is_completed: false },
-        { id: 3, text: 'Прочитать главу 5 по истории', deadline: new Date(now.getTime() - 60 * 60 * 1000).toISOString(), is_completed: false },
-        { id: 4, text: 'Нарисовать схему по биологии', deadline: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), is_completed: true },
-      ] as Task[]);
-      setIsLoading(false);
-      return;
-    }
     try {
       const data = await api.getTasks();
       setTasks(data);

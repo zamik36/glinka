@@ -33,7 +33,7 @@ def is_image(mime_type: str, filename: str) -> bool:
 
 
 async def send_reminder_with_attachments(bot: Bot, chat_id: int, text: str, attachments: list[dict]):
-    caption = f"\U0001f6a8 <b>Напоминание о дедлайне!</b>\n\n\U0001f4dd Задача: <i>{escape(text)}</i>"
+    caption = f"Дедлайн на горизонте\U0001fae0\n\n\U0001f4dd Задача: <i>{escape(text)}</i>"
 
     if not attachments:
         await bot.send_message(chat_id=chat_id, text=caption, parse_mode="HTML")
