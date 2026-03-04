@@ -70,5 +70,5 @@ jobs:
             cd ${{ secrets.VPS_PROJECT_PATH }}
             git pull origin main
             docker compose up -d --build
-            sleep 5
-            curl -f http://localhost:8000/docs || exit 1
+            sleep 10
+            curl -f http://localhost/api/docs || exit 1
