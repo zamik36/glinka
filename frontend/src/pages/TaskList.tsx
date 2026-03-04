@@ -7,13 +7,33 @@ import { FiBookOpen } from 'react-icons/fi';
 import { isPast } from 'date-fns';
 import { useTelegram } from '../hooks/useTelegram';
 
+type Filter = 'active' | 'done' | 'overdue';
+
 const SkeletonCard: React.FC = () => (
-  <div className="card mb-3 p-4">
-    <div className="h-4 w-4/5 animate-shimmer mb-3" />
-    <div className="h-4 w-3/5 animate-shimmer mb-4" />
-    <div className="flex justify-between">
-      <div className="h-6 w-28 animate-shimmer rounded-full" />
-      <div className="h-6 w-20 animate-shimmer rounded-full" />
+  <div
+    className="mb-3 overflow-hidden"
+    style={{
+      background: 'var(--surface-card)',
+      borderRadius: 18,
+      border: '1px solid var(--border-light)',
+    }}
+  >
+    <div className="animate-shimmer" style={{ height: 3, borderRadius: '18px 18px 0 0' }} />
+    <div style={{ padding: '14px 16px 12px' }}>
+      <div className="flex justify-between items-start mb-3 gap-3">
+        <div className="h-4 w-3/5 animate-shimmer rounded-lg" />
+        <div className="h-5 w-16 animate-shimmer rounded-full flex-shrink-0" />
+      </div>
+      <div className="flex justify-between items-end">
+        <div className="flex flex-col gap-1">
+          <div className="h-3.5 w-24 animate-shimmer rounded" />
+          <div className="h-3 w-16 animate-shimmer rounded" />
+        </div>
+        <div className="flex gap-2">
+          <div className="w-8 h-8 animate-shimmer rounded-[10px]" />
+          <div className="w-8 h-8 animate-shimmer rounded-[10px]" />
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -25,9 +45,22 @@ type TaskListProps = {
 export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<Filter>('active');
   const { tg, hapticFeedback } = useTelegram();
 
   const loadTasks = async () => {
+    // DEV MOCK — удали этот блок перед коммитом
+    if (import.meta.env.DEV) {
+      const now = new Date();
+      setTasks([
+        { id: 1, text: 'Сдать реферат по физике', deadline: new Date(now.getTime() + 2 * 60 * 1000).toISOString(), is_completed: false },
+        { id: 2, text: 'Подготовиться к контрольной по математике', deadline: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(), is_completed: false },
+        { id: 3, text: 'Прочитать главу 5 по истории', deadline: new Date(now.getTime() - 60 * 60 * 1000).toISOString(), is_completed: false },
+        { id: 4, text: 'Нарисовать схему по биологии', deadline: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), is_completed: true },
+      ] as Task[]);
+      setIsLoading(false);
+      return;
+    }
     try {
       const data = await api.getTasks();
       setTasks(data);
@@ -56,9 +89,37 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
     });
   }, [tg, hapticFeedback]);
 
+  const handleToggleComplete = useCallback(async (taskId: number, value: boolean) => {
+    // Оптимистичный update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
+    hapticFeedback();
+    try {
+      await api.toggleComplete(taskId, value);
+    } catch (error) {
+      // Rollback при ошибке
+      console.error('Toggle failed:', error);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
+    }
+  }, [hapticFeedback]);
+
   const overdueCount = tasks.filter(t => !t.is_completed && isPast(new Date(t.deadline))).length;
-  const activeCount = tasks.filter(t => !t.is_completed).length;
+  const activeCount = tasks.filter(t => !t.is_completed && !isPast(new Date(t.deadline))).length;
   const doneCount = tasks.filter(t => t.is_completed).length;
+
+  const filteredTasks = tasks.filter(t => {
+    if (filter === 'active') return !t.is_completed && !isPast(new Date(t.deadline));
+    if (filter === 'done') return t.is_completed;
+    if (filter === 'overdue') return !t.is_completed && isPast(new Date(t.deadline));
+    return true;
+  });
+
+  const statTabs: { key: Filter; count: number; label: string; color: string; bg: string; activeBg: string }[] = [
+    { key: 'active', count: activeCount, label: 'Активных', color: '#6C5CE7', bg: 'rgba(108,92,231,0.07)', activeBg: 'rgba(108,92,231,0.14)' },
+    { key: 'done', count: doneCount, label: 'Готово', color: '#059669', bg: 'rgba(16,185,129,0.07)', activeBg: 'rgba(16,185,129,0.14)' },
+    ...(overdueCount > 0
+      ? [{ key: 'overdue' as Filter, count: overdueCount, label: 'Просрочено', color: '#DC2626', bg: 'rgba(239,68,68,0.07)', activeBg: 'rgba(239,68,68,0.14)' }]
+      : []),
+  ];
 
   if (isLoading) {
     return (
@@ -74,28 +135,40 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
 
   return (
     <div>
-      {/* Stats row */}
+      {/* Filter tabs */}
       {tasks.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex gap-2 mb-5"
+          className="flex gap-2.5 mb-5"
         >
-          <div className="flex-1 rounded-2xl p-3 text-center" style={{ background: '#F3F0FF' }}>
-            <p className="text-xl font-bold" style={{ color: '#6C5CE7' }}>{activeCount}</p>
-            <p className="text-[11px] font-medium" style={{ color: '#8B7FE8' }}>Активных</p>
-          </div>
-          <div className="flex-1 rounded-2xl p-3 text-center" style={{ background: '#ECFDF5' }}>
-            <p className="text-xl font-bold" style={{ color: '#10B981' }}>{doneCount}</p>
-            <p className="text-[11px] font-medium" style={{ color: '#34D399' }}>Готово</p>
-          </div>
-          {overdueCount > 0 && (
-            <div className="flex-1 rounded-2xl p-3 text-center" style={{ background: '#FEF2F2' }}>
-              <p className="text-xl font-bold" style={{ color: '#EF4444' }}>{overdueCount}</p>
-              <p className="text-[11px] font-medium" style={{ color: '#F87171' }}>Просрочено</p>
-            </div>
-          )}
+          {statTabs.map(tab => {
+            const isActive = filter === tab.key;
+            return (
+              <motion.button
+                key={tab.key}
+                onClick={() => setFilter(tab.key)}
+                animate={{ scale: isActive ? 1.03 : 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex-1 text-center"
+                style={{
+                  background: isActive ? tab.activeBg : tab.bg,
+                  borderRadius: 14,
+                  padding: '10px 8px',
+                  border: isActive ? `1.5px solid ${tab.color}44` : '1.5px solid transparent',
+                  cursor: 'pointer',
+                  opacity: isActive ? 1 : 0.65,
+                  transition: 'background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                }}
+              >
+                <p className="text-[22px] font-bold leading-none mb-0.5" style={{ color: tab.color }}>{tab.count}</p>
+                <p className="text-[11px] font-semibold" style={{ color: tab.color + 'BB' }}>{tab.label}</p>
+              </motion.button>
+            );
+          })}
         </motion.div>
       )}
 
@@ -125,14 +198,42 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
             Нажми <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-white text-xs font-bold" style={{ background: '#6C5CE7' }}>+</span> чтобы начать
           </div>
         </motion.div>
+      ) : filteredTasks.length === 0 ? (
+        <motion.div
+          key={filter}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center mt-12"
+        >
+          <p className="text-base font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+            {filter === 'done' && 'Нет выполненных заданий'}
+            {filter === 'overdue' && 'Нет просроченных заданий'}
+            {filter === 'active' && 'Нет активных заданий'}
+          </p>
+        </motion.div>
       ) : (
-        <div>
-          <AnimatePresence>
-            {tasks.map((task, i) => (
-              <TaskCard key={task.id} task={task} index={i} onEdit={onEdit} onDelete={handleDelete} />
-            ))}
-          </AnimatePresence>
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={filter}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <AnimatePresence>
+              {filteredTasks.map((task, i) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  index={i}
+                  onEdit={onEdit}
+                  onDelete={handleDelete}
+                  onToggleComplete={handleToggleComplete}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </AnimatePresence>
       )}
     </div>
   );

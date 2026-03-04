@@ -34,6 +34,7 @@ class PostgresTaskRepository(TaskRepository):
                 "text": row.text,
                 "deadline": row.deadline,
                 "is_completed": row.is_completed,
+                "created_at": row.created_at,
                 "attachments": [
                     {
                         "id": a.id,
@@ -65,6 +66,7 @@ class PostgresTaskRepository(TaskRepository):
             "text": row.text,
             "deadline": row.deadline,
             "is_completed": row.is_completed,
+            "created_at": row.created_at,
             "attachments": [
                 {
                     "id": a.id,
@@ -88,6 +90,10 @@ class PostgresTaskRepository(TaskRepository):
 
     async def delete(self, task_id: int) -> None:
         stmt = delete(TaskModel).where(TaskModel.id == task_id)
+        await self.session.execute(stmt)
+
+    async def toggle_complete(self, task_id: int, is_completed: bool) -> None:
+        stmt = update(TaskModel).where(TaskModel.id == task_id).values(is_completed=is_completed)
         await self.session.execute(stmt)
 
 class PostgresReminderRepository(ReminderRepository):
@@ -119,6 +125,7 @@ class PostgresReminderRepository(ReminderRepository):
             "task_id": task.id,
             "user_id": task.user_id,
             "text": task.text,
+            "remind_at": reminder.remind_at,
         }
 
     async def get_pending_and_lock(self, limit: int = 100) -> list[dict[str, Any]]:
@@ -183,14 +190,6 @@ class PostgresReminderRepository(ReminderRepository):
 
     async def delete_by_task(self, task_id: int) -> None:
         stmt = delete(ReminderModel).where(ReminderModel.task_id == task_id)
-        await self.session.execute(stmt)
-
-    async def mark_task_completed(self, task_id: int) -> None:
-        stmt = (
-            update(TaskModel)
-            .where(TaskModel.id == task_id)
-            .values(is_completed=True)
-        )
         await self.session.execute(stmt)
 
 class PostgresAttachmentRepository(AttachmentRepository):

@@ -23,6 +23,8 @@ async function readErrorMessage(response: Response): Promise<string> {
   return `HTTP ${response.status} ${response.statusText}`.trim();
 }
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   const isFormData = options.body instanceof FormData;
 
@@ -34,10 +36,24 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: { ...headers, ...(options.headers as Record<string, string>) },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: { ...headers, ...(options.headers as Record<string, string>) },
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new ApiError(408, 'Request timed out');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const message = await readErrorMessage(response);
@@ -72,4 +88,10 @@ export const api = {
 
   deleteTask: (taskId: number): Promise<{ status: string }> =>
     fetchWithAuth(`/tasks/${taskId}`, { method: 'DELETE' }),
+
+  toggleComplete: (taskId: number, isCompleted: boolean): Promise<{ status: string }> =>
+    fetchWithAuth(`/tasks/${taskId}/complete`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_completed: isCompleted }),
+    }),
 };

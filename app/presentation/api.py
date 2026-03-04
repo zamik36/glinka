@@ -1,13 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from typing import Optional
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.presentation.dependencies import get_current_user, get_task_service, get_file_storage
 from app.application.task_services import TaskService
 from app.infrastructure.file_storage import FileStorageService
 from app.domain.entities import Attachment
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database import get_db_session
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
 
@@ -22,10 +26,13 @@ class TaskResponse(BaseModel):
     text: str
     deadline: datetime
     is_completed: bool
+    created_at: datetime
     attachments: list[AttachmentResponse] = []
 
 @router.post("")
+@limiter.limit("20/minute")
 async def create_task(
+    request: Request,
     text: str = Form(..., min_length=1, max_length=2000),
     deadline: str = Form(...),
     files: list[UploadFile] = File(default=[]),
@@ -97,6 +104,23 @@ async def delete_task(
     session: AsyncSession = Depends(get_db_session),
 ):
     await service.delete_task(task_id, user_id)
+    await session.commit()
+    return {"status": "success"}
+
+
+class CompletePayload(BaseModel):
+    is_completed: bool
+
+
+@router.patch("/{task_id}/complete")
+async def toggle_task_complete(
+    task_id: int,
+    payload: CompletePayload,
+    user_id: int = Depends(get_current_user),
+    service: TaskService = Depends(get_task_service),
+    session: AsyncSession = Depends(get_db_session),
+):
+    await service.toggle_complete(task_id, user_id, payload.is_completed)
     await session.commit()
     return {"status": "success"}
 

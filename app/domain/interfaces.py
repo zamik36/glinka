@@ -26,6 +26,10 @@ class TaskRepository(ABC):
     async def delete(self, task_id: int) -> None:
         pass
 
+    @abstractmethod
+    async def toggle_complete(self, task_id: int, is_completed: bool) -> None:
+        pass
+
 
 class ReminderRepository(ABC):
     @abstractmethod

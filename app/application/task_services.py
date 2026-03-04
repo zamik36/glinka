@@ -89,7 +89,7 @@ class TaskService:
         paths = await self.attachment_repo.delete_by_task(task_id)
         if self.file_storage:
             for path in paths:
-                self.file_storage.delete(path)
+                await self.file_storage.delete(path)
 
         # Cascade will handle reminders, but delete explicitly for clarity
         await self.reminder_repo.delete_by_task(task_id)
@@ -97,3 +97,11 @@ class TaskService:
 
     async def get_user_tasks(self, user_id: int) -> list[dict[str, Any]]:
         return await self.task_repo.get_by_user(user_id)
+
+    async def toggle_complete(self, task_id: int, user_id: int, is_completed: bool) -> None:
+        task = await self.task_repo.get_by_id(task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task["user_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        await self.task_repo.toggle_complete(task_id, is_completed)

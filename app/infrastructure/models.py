@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database import Base
@@ -14,6 +14,7 @@ class TaskModel(Base):
     text: Mapped[str] = mapped_column(String(2000))
     deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_completed: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     reminders: Mapped[list["ReminderModel"]] = relationship(back_populates="task", cascade="all, delete-orphan")
     attachments: Mapped[list["AttachmentModel"]] = relationship(back_populates="task", cascade="all, delete-orphan")
