@@ -64,6 +64,43 @@ async def create_task(
     await session.commit()
     return {"status": "success", "task_id": task.id}
 
+@router.put("/{task_id}")
+async def update_task(
+    task_id: int,
+    text: str = Form(..., min_length=1, max_length=2000),
+    deadline: str = Form(...),
+    user_id: int = Depends(get_current_user),
+    service: TaskService = Depends(get_task_service),
+    session: AsyncSession = Depends(get_db_session),
+):
+    try:
+        deadline_dt = datetime.fromisoformat(deadline)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deadline format")
+
+    if deadline_dt.tzinfo is None:
+        deadline_dt = deadline_dt.replace(tzinfo=timezone.utc)
+
+    if deadline_dt <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Deadline must be in the future")
+
+    await service.update_task(task_id, user_id, text, deadline_dt)
+    await session.commit()
+    return {"status": "success"}
+
+
+@router.delete("/{task_id}")
+async def delete_task(
+    task_id: int,
+    user_id: int = Depends(get_current_user),
+    service: TaskService = Depends(get_task_service),
+    session: AsyncSession = Depends(get_db_session),
+):
+    await service.delete_task(task_id, user_id)
+    await session.commit()
+    return {"status": "success"}
+
+
 @router.get("", response_model=list[TaskResponse])
 async def get_tasks(
     user_id: int = Depends(get_current_user),

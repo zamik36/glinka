@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any
 
 from app.domain.entities import Task, Reminder, Attachment
@@ -11,6 +12,18 @@ class TaskRepository(ABC):
 
     @abstractmethod
     async def get_by_user(self, user_id: int) -> list[dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    async def get_by_id(self, task_id: int) -> dict[str, Any] | None:
+        pass
+
+    @abstractmethod
+    async def update(self, task_id: int, text: str, deadline: datetime) -> None:
+        pass
+
+    @abstractmethod
+    async def delete(self, task_id: int) -> None:
         pass
 
 
@@ -33,6 +46,10 @@ class ReminderRepository(ABC):
     async def mark_as_sent(self, reminder_id: int) -> None:
         pass
 
+    @abstractmethod
+    async def delete_by_task(self, task_id: int) -> None:
+        pass
+
 
 class AttachmentRepository(ABC):
     @abstractmethod
@@ -41,4 +58,9 @@ class AttachmentRepository(ABC):
 
     @abstractmethod
     async def get_by_task(self, task_id: int) -> list[Attachment]:
+        pass
+
+    @abstractmethod
+    async def delete_by_task(self, task_id: int) -> list[str]:
+        """Delete all attachments for a task, return stored_path list for cleanup."""
         pass

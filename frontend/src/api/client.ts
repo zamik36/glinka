@@ -1,5 +1,5 @@
 import { getTelegramInitData } from '../lib/telegram';
-import type { Task, TaskCreateRequest } from '../types';
+import type { Task, TaskCreateRequest, TaskUpdateRequest } from '../types';
 
 const API_BASE = '/api';
 
@@ -62,4 +62,14 @@ export const api = {
 
     return fetchWithAuth('/tasks', { method: 'POST', body: formData });
   },
+
+  updateTask: (taskId: number, data: TaskUpdateRequest): Promise<{ status: string }> => {
+    const formData = new FormData();
+    formData.append('text', data.text);
+    formData.append('deadline', data.deadline);
+    return fetchWithAuth(`/tasks/${taskId}`, { method: 'PUT', body: formData });
+  },
+
+  deleteTask: (taskId: number): Promise<{ status: string }> =>
+    fetchWithAuth(`/tasks/${taskId}`, { method: 'DELETE' }),
 };

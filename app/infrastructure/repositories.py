@@ -1,7 +1,7 @@
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
 from app.domain.interfaces import TaskRepository, ReminderRepository, AttachmentRepository
 from app.domain.entities import Task, Reminder, Attachment
@@ -48,6 +48,47 @@ class PostgresTaskRepository(TaskRepository):
             }
             tasks.append(task_dict)
         return tasks
+
+    async def get_by_id(self, task_id: int) -> dict[str, Any] | None:
+        stmt = (
+            select(TaskModel)
+            .options(selectinload(TaskModel.attachments))
+            .where(TaskModel.id == task_id)
+        )
+        result = await self.session.execute(stmt)
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return {
+            "id": row.id,
+            "user_id": row.user_id,
+            "text": row.text,
+            "deadline": row.deadline,
+            "is_completed": row.is_completed,
+            "attachments": [
+                {
+                    "id": a.id,
+                    "task_id": a.task_id,
+                    "filename": a.filename,
+                    "stored_path": a.stored_path,
+                    "mime_type": a.mime_type,
+                    "size": a.size,
+                }
+                for a in row.attachments
+            ],
+        }
+
+    async def update(self, task_id: int, text: str, deadline: object) -> None:
+        stmt = (
+            update(TaskModel)
+            .where(TaskModel.id == task_id)
+            .values(text=text, deadline=deadline)
+        )
+        await self.session.execute(stmt)
+
+    async def delete(self, task_id: int) -> None:
+        stmt = delete(TaskModel).where(TaskModel.id == task_id)
+        await self.session.execute(stmt)
 
 class PostgresReminderRepository(ReminderRepository):
     def __init__(self, session: AsyncSession):
@@ -140,6 +181,10 @@ class PostgresReminderRepository(ReminderRepository):
         result = await self.session.execute(stmt)
         return result.scalar_one() > 0
 
+    async def delete_by_task(self, task_id: int) -> None:
+        stmt = delete(ReminderModel).where(ReminderModel.task_id == task_id)
+        await self.session.execute(stmt)
+
     async def mark_task_completed(self, task_id: int) -> None:
         stmt = (
             update(TaskModel)
@@ -179,3 +224,11 @@ class PostgresAttachmentRepository(AttachmentRepository):
             )
             for a in result.scalars().all()
         ]
+
+    async def delete_by_task(self, task_id: int) -> list[str]:
+        stmt = select(AttachmentModel.stored_path).where(AttachmentModel.task_id == task_id)
+        result = await self.session.execute(stmt)
+        paths = list(result.scalars().all())
+        del_stmt = delete(AttachmentModel).where(AttachmentModel.task_id == task_id)
+        await self.session.execute(del_stmt)
+        return paths

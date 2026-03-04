@@ -23,7 +23,8 @@ async def get_task_service(session: AsyncSession = Depends(get_db_session)) -> T
     task_repo = PostgresTaskRepository(session)
     reminder_repo = PostgresReminderRepository(session)
     attachment_repo = PostgresAttachmentRepository(session)
-    return TaskService(task_repo, reminder_repo, attachment_repo)
+    file_storage = FileStorageService()
+    return TaskService(task_repo, reminder_repo, attachment_repo, file_storage)
 
 def get_file_storage() -> FileStorageService:
     return FileStorageService()
