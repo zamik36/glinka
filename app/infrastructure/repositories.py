@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func
 from sqlalchemy.orm import selectinload
@@ -16,7 +18,7 @@ class PostgresTaskRepository(TaskRepository):
         task.id = db_task.id
         return task
 
-    async def get_by_user(self, user_id: int) -> list[dict]:
+    async def get_by_user(self, user_id: int) -> list[dict[str, Any]]:
         stmt = (
             select(TaskModel)
             .options(selectinload(TaskModel.attachments))
@@ -56,7 +58,7 @@ class PostgresReminderRepository(ReminderRepository):
         self.session.add(db_reminder)
         return reminder
 
-    async def get_pending_and_lock(self, limit: int = 100) -> list[dict]:
+    async def get_pending_and_lock(self, limit: int = 100) -> list[dict[str, Any]]:
         """
         Используем SQLAlchemy ORM для выборки с блокировкой.
         Возвращаем словарь, чтобы передать воркеру не только ID, но и Telegram ID пользователя и текст задачи.
@@ -87,7 +89,7 @@ class PostgresReminderRepository(ReminderRepository):
 
         return pending_reminders
 
-    async def get_attachments_for_task(self, task_id: int) -> list[dict]:
+    async def get_attachments_for_task(self, task_id: int) -> list[dict[str, Any]]:
         stmt = select(AttachmentModel).where(AttachmentModel.task_id == task_id)
         result = await self.session.execute(stmt)
         return [

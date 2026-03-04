@@ -1,34 +1,43 @@
-from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
+from datetime import datetime
+
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.infrastructure.database import Base
+
 
 class TaskModel(Base):
     __tablename__ = "tasks"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(BigInteger, index=True, nullable=False)
-    text = Column(String(2000), nullable=False)
-    deadline = Column(DateTime(timezone=True), nullable=False)
-    is_completed = Column(Boolean, default=False)
 
-    reminders = relationship("ReminderModel", back_populates="task", cascade="all, delete-orphan")
-    attachments = relationship("AttachmentModel", back_populates="task", cascade="all, delete-orphan")
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    text: Mapped[str] = mapped_column(String(2000))
+    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    is_completed: Mapped[bool] = mapped_column(default=False)
+
+    reminders: Mapped[list["ReminderModel"]] = relationship(back_populates="task", cascade="all, delete-orphan")
+    attachments: Mapped[list["AttachmentModel"]] = relationship(back_populates="task", cascade="all, delete-orphan")
+
 
 class ReminderModel(Base):
     __tablename__ = "reminders"
-    id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
-    remind_at = Column(DateTime(timezone=True), index=True, nullable=False)
-    is_sent = Column(Boolean, default=False, index=True)
 
-    task = relationship("TaskModel", back_populates="reminders")
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"))
+    remind_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    is_sent: Mapped[bool] = mapped_column(default=False, index=True)
+
+    task: Mapped["TaskModel"] = relationship(back_populates="reminders")
+
 
 class AttachmentModel(Base):
     __tablename__ = "attachments"
-    id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
-    filename = Column(String(500), nullable=False)
-    stored_path = Column(String(500), nullable=False)
-    mime_type = Column(String(200), nullable=False)
-    size = Column(Integer, nullable=False)
 
-    task = relationship("TaskModel", back_populates="attachments")
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"))
+    filename: Mapped[str] = mapped_column(String(500))
+    stored_path: Mapped[str] = mapped_column(String(500))
+    mime_type: Mapped[str] = mapped_column(String(200))
+    size: Mapped[int] = mapped_column()
+
+    task: Mapped["TaskModel"] = relationship(back_populates="attachments")
