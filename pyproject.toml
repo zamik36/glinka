@@ -21,6 +21,8 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.25",
+    "pytest-cov>=6.0",
     "httpx>=0.28",
     "aiosqlite>=0.21",
+    "ty>=0.0.1a7",
 ]

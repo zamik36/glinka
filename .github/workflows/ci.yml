@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -34,17 +38,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: uv sync --group dev
 
+      - name: Type check
+        run: uv run ty check app/ || true
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
       - name: Run tests
-        run: uv run pytest -v
+        run: uv run pytest -v --cov=app --cov-report=term-missing
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
 
     steps:
       - name: Deploy to VPS
@@ -57,3 +70,5 @@ jobs:
             cd ${{ secrets.VPS_PROJECT_PATH }}
             git pull origin main
             docker compose up -d --build
+            sleep 5
+            curl -f http://localhost:8000/docs || exit 1
