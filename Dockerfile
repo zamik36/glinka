@@ -21,7 +21,7 @@ COPY . .
 # Создаём директорию для загрузок и non-root пользователя
 RUN useradd --create-home --shell /bin/bash appuser \
     && mkdir -p /app/uploads \
-    && chown -R appuser:appuser /app/uploads
+    && chown -R appuser:appuser /app
 USER appuser
 
 # Команда по умолчанию (будет переопределена в docker-compose.yml)
