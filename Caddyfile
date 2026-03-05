@@ -18,7 +18,7 @@ glinka-ht.ru {
         reverse_proxy api:8000
     }
 
-    handle /grafana/* {
+    handle /grafana* {
         basicauth {
             admin {env.CADDY_ADMIN_HASH}
         }

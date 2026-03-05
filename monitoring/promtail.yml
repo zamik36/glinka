@@ -25,12 +25,3 @@ scrape_configs:
       - source_labels: [service]
         regex: ".+"
         action: keep
-    pipeline_stages:
-      - json:
-          expressions:
-            level: level
-            logger: logger
-            message: message
-      - labels:
-          level:
-          logger:
