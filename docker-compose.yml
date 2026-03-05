@@ -37,6 +37,7 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-https://glinka-ht.ru}
       - FILE_STORAGE_DIR=/app/uploads
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prom_mp
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -96,6 +97,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
+    environment:
+      - CADDY_ADMIN_HASH=${CADDY_ADMIN_HASH:?Set CADDY_ADMIN_HASH in .env}
     depends_on:
       - api
       - frontend
@@ -105,8 +108,72 @@ services:
           cpus: "0.5"
           memory: 128M
 
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  loki:
+    image: grafana/loki:3.5.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki.yml
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  promtail:
+    image: grafana/promtail:3.5.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/promtail.yml
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+  grafana:
+    image: grafana/grafana:12.0.2
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD in .env}
+      - GF_SERVER_ROOT_URL=https://glinka-ht.ru/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    depends_on:
+      - prometheus
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
 volumes:
   pgdata:
   caddy_data:
   caddy_config:
   uploads:
+  prometheus_data:
+  loki_data:
+  grafana_data:
