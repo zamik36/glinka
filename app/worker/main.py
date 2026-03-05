@@ -9,17 +9,16 @@ from html import escape
 import asyncpg
 from aiogram import Bot
 from aiogram.types import FSInputFile, InputMediaDocument, InputMediaPhoto
+from prometheus_client import start_http_server
 
 from app.core.config import settings
+from app.core.logging_config import configure_logging
 from app.infrastructure.database import AsyncSessionLocal
 from app.infrastructure.repositories import PostgresReminderRepository
+from app.worker.metrics import reminder_latency_seconds, reminders_failed_total, reminders_sent_total
 from app.worker.scheduler import ReminderScheduler
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
@@ -93,11 +92,14 @@ async def _process_loop(
                     scheduler.mark_processed(reminder_id)
 
                     latency = (datetime.now(timezone.utc) - item["remind_at"]).total_seconds()
+                    reminders_sent_total.inc()
+                    reminder_latency_seconds.observe(latency)
                     logger.info("Sent reminder %d to user %d (latency=%.1fs)", reminder_id, item["user_id"], latency)
 
                 except Exception as e:
                     await session.rollback()
                     scheduler.mark_processed(reminder_id)
+                    reminders_failed_total.labels(reason=type(e).__name__).inc()
                     logger.error("Failed to send reminder %d: %s", reminder_id, e)
 
     while not shutdown_event.is_set():
@@ -225,6 +227,8 @@ async def worker_loop():
 
 
 if __name__ == "__main__":
+    start_http_server(9091)
+    logger.info("Worker metrics server started on :9091")
     try:
         asyncio.run(worker_loop())
     except (KeyboardInterrupt, SystemExit):

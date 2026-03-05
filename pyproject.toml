@@ -16,6 +16,8 @@ dependencies = [
     "aiofiles>=24.1.0",
     "python-multipart>=0.0.20",
     "slowapi>=0.1.9",
+    "python-json-logger>=2.0",
+    "prometheus-fastapi-instrumentator>=7.0",
 ]
 
 [dependency-groups]
