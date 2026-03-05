@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { useTelegram } from '../hooks/useTelegram';
@@ -91,7 +91,7 @@ export const AddTask: React.FC<Props> = ({ onSuccess, onClose, editTask }) => {
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       tg.showAlert(`Ошибка: ${message}`);
-      console.error('Task save failed:', error);
+      console.error('Task save failed:', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsSubmitting(false);
     }
@@ -99,6 +99,12 @@ export const AddTask: React.FC<Props> = ({ onSuccess, onClose, editTask }) => {
 
   const isImage = (file: File) => file.type.startsWith('image/');
   const charPercent = Math.min((text.length / 2000) * 100, 100);
+
+  const previewUrls = useMemo(() => files.filter(isImage).map(f => ({ file: f, url: URL.createObjectURL(f) })), [files]);
+  useEffect(() => {
+    return () => { previewUrls.forEach(p => URL.revokeObjectURL(p.url)); };
+  }, [previewUrls]);
+  const getPreviewUrl = (file: File) => previewUrls.find(p => p.file === file)?.url;
 
   return (
     <div className="px-5 pb-8 pt-2">
@@ -234,7 +240,7 @@ export const AddTask: React.FC<Props> = ({ onSuccess, onClose, editTask }) => {
                 >
                   {isImage(file) ? (
                     <img
-                      src={URL.createObjectURL(file)}
+                      src={getPreviewUrl(file)}
                       alt={file.name}
                       className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
                     />

@@ -129,5 +129,11 @@ async def toggle_task_complete(
 async def get_tasks(
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
+    limit: int = 50,
+    offset: int = 0,
 ):
-    return await service.get_user_tasks(user_id)
+    if limit < 1 or limit > 200:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 200")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="offset must be non-negative")
+    return await service.get_user_tasks(user_id, limit=limit, offset=offset)

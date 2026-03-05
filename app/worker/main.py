@@ -42,7 +42,7 @@ async def send_reminder_with_attachments(bot: Bot, chat_id: int, text: str, atta
     valid_attachments = []
     for att in attachments:
         full_path = os.path.join(settings.FILE_STORAGE_DIR, att["stored_path"])
-        if os.path.exists(full_path):
+        if await asyncio.to_thread(os.path.exists, full_path):
             valid_attachments.append({**att, "full_path": full_path})
 
     if not valid_attachments:

@@ -11,11 +11,11 @@ class TaskRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_user(self, user_id: int) -> list[dict[str, Any]]:
+    async def get_by_user(self, user_id: int, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         pass
 
     @abstractmethod
-    async def get_by_id(self, task_id: int) -> dict[str, Any] | None:
+    async def get_by_id(self, task_id: int, for_update: bool = False) -> dict[str, Any] | None:
         pass
 
     @abstractmethod

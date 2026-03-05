@@ -26,4 +26,5 @@ dev = [
     "httpx>=0.28",
     "aiosqlite>=0.21",
     "ty>=0.0.1a7",
+    "pip-audit>=2.7",
 ]

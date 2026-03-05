@@ -53,7 +53,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
       const data = await api.getTasks();
       setTasks(data);
     } catch (error) {
-      console.error(error);
+      console.error('Failed to load tasks:', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +71,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
         hapticFeedback();
         setTasks(prev => prev.filter(t => t.id !== taskId));
       } catch (error) {
-        console.error('Delete failed:', error);
+        console.error('Delete failed:', error instanceof Error ? error.message : 'Unknown error');
         tg.showAlert('Ошибка при удалении');
       }
     });
@@ -85,7 +85,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
       await api.toggleComplete(taskId, value);
     } catch (error) {
       // Rollback при ошибке
-      console.error('Toggle failed:', error);
+      console.error('Toggle failed:', error instanceof Error ? error.message : 'Unknown error');
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
     }
   }, [hapticFeedback]);
