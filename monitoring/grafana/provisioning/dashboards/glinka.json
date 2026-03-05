@@ -105,7 +105,7 @@
       "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
       "targets": [
         {
-          "expr": "{project=\"glinka\"} | json",
+          "expr": "{project=\"glinka\", service=~\"api|worker\"} | json",
           "legendFormat": ""
         }
       ],
