@@ -75,4 +75,4 @@ jobs:
             docker compose build
             docker compose run --rm migrate
             docker compose up -d
-            curl -f --retry 10 --retry-delay 3 --retry-connrefused https://glinka-ht.ru/api/docs || exit 1
+            curl -f --retry 10 --retry-delay 3 --retry-connrefused https://glinka-ht.ru/ || exit 1
