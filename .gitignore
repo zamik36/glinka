@@ -12,6 +12,7 @@ wheels/
 # Environment / secrets
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.p12
@@ -33,4 +34,3 @@ frontend/node_modules/
 Thumbs.db
 .claude
 CLAUDE.md
-CHANGES.md

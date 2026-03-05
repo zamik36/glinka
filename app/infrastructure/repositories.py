@@ -18,12 +18,14 @@ class PostgresTaskRepository(TaskRepository):
         task.id = db_task.id
         return task
 
-    async def get_by_user(self, user_id: int) -> list[dict[str, Any]]:
+    async def get_by_user(self, user_id: int, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         stmt = (
             select(TaskModel)
             .options(selectinload(TaskModel.attachments))
             .where(TaskModel.user_id == user_id)
             .order_by(TaskModel.deadline)
+            .limit(limit)
+            .offset(offset)
         )
         result = await self.session.execute(stmt)
         tasks = []
@@ -50,12 +52,14 @@ class PostgresTaskRepository(TaskRepository):
             tasks.append(task_dict)
         return tasks
 
-    async def get_by_id(self, task_id: int) -> dict[str, Any] | None:
+    async def get_by_id(self, task_id: int, for_update: bool = False) -> dict[str, Any] | None:
         stmt = (
             select(TaskModel)
             .options(selectinload(TaskModel.attachments))
             .where(TaskModel.id == task_id)
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         row = result.scalar_one_or_none()
         if row is None:

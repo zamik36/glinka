@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database import Base
@@ -22,9 +22,10 @@ class TaskModel(Base):
 
 class ReminderModel(Base):
     __tablename__ = "reminders"
+    __table_args__ = (Index('ix_reminders_pending', 'is_sent', 'remind_at'),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"))
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
     remind_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     is_sent: Mapped[bool] = mapped_column(default=False, index=True)
 
@@ -35,7 +36,7 @@ class AttachmentModel(Base):
     __tablename__ = "attachments"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"))
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
     filename: Mapped[str] = mapped_column(String(500))
     stored_path: Mapped[str] = mapped_column(String(500))
     mime_type: Mapped[str] = mapped_column(String(200))

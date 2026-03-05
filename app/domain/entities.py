@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
@@ -10,7 +10,7 @@ class User(BaseModel):
 class Task(BaseModel):
     id: Optional[int] = None
     user_id: int
-    text: str
+    text: str = Field(min_length=1, max_length=2000)
     deadline: datetime
     is_completed: bool = False
 
@@ -23,7 +23,7 @@ class Reminder(BaseModel):
 class Attachment(BaseModel):
     id: Optional[int] = None
     task_id: int
-    filename: str
-    stored_path: str
-    mime_type: str
-    size: int
+    filename: str = Field(min_length=1, max_length=500)
+    stored_path: str = Field(min_length=1, max_length=500)
+    mime_type: str = Field(min_length=1, max_length=200)
+    size: int = Field(gt=0, le=10_485_760)
