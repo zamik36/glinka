@@ -8,12 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Настраиваем рабочую директорию
 WORKDIR /app
-ENV UV_PROJECT_ENVIRONMENT=/usr/local
 
 # Устанавливаем uv и зависимости проекта из lock-файла
 RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen
+
+# Не пересинхронизировать окружение при каждом запуске контейнера
+ENV UV_NO_SYNC=1
 
 # Копируем весь код проекта
 COPY . .
