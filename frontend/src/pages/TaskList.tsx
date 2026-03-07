@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import type { Task } from '../types';
@@ -8,6 +8,10 @@ import { isPast } from 'date-fns';
 import { useTelegram } from '../hooks/useTelegram';
 
 type Filter = 'active' | 'done' | 'overdue';
+
+export interface TaskListHandle {
+  reload: () => void;
+}
 
 const SkeletonCard: React.FC = () => (
   <div
@@ -42,13 +46,13 @@ type TaskListProps = {
   onEdit?: (task: Task) => void;
 };
 
-export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
+export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, ref) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('active');
   const { tg, hapticFeedback } = useTelegram();
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       const data = await api.getTasks();
       setTasks(data);
@@ -57,11 +61,13 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useImperativeHandle(ref, () => ({ reload: loadTasks }), [loadTasks]);
 
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, [loadTasks]);
 
   const handleDelete = useCallback((taskId: number) => {
     tg.showConfirm('Удалить задание?', async (confirmed: boolean) => {
@@ -78,28 +84,32 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
   }, [tg, hapticFeedback]);
 
   const handleToggleComplete = useCallback(async (taskId: number, value: boolean) => {
-    // Оптимистичный update
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     hapticFeedback();
     try {
       await api.toggleComplete(taskId, value);
     } catch (error) {
-      // Rollback при ошибке
       console.error('Toggle failed:', error instanceof Error ? error.message : 'Unknown error');
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
     }
   }, [hapticFeedback]);
 
-  const overdueCount = tasks.filter(t => !t.is_completed && isPast(new Date(t.deadline))).length;
-  const activeCount = tasks.filter(t => !t.is_completed && !isPast(new Date(t.deadline))).length;
-  const doneCount = tasks.filter(t => t.is_completed).length;
-
-  const filteredTasks = tasks.filter(t => {
-    if (filter === 'active') return !t.is_completed && !isPast(new Date(t.deadline));
-    if (filter === 'done') return t.is_completed;
-    if (filter === 'overdue') return !t.is_completed && isPast(new Date(t.deadline));
-    return true;
-  });
+  // Single pass through tasks — no repeated iterations on every render
+  const { overdueCount, activeCount, doneCount, filteredTasks } = useMemo(() => {
+    const overdue: Task[] = [], active: Task[] = [], done: Task[] = [];
+    for (const t of tasks) {
+      if (t.is_completed) done.push(t);
+      else if (isPast(new Date(t.deadline))) overdue.push(t);
+      else active.push(t);
+    }
+    const map: Record<Filter, Task[]> = { active, done, overdue };
+    return {
+      overdueCount: overdue.length,
+      activeCount: active.length,
+      doneCount: done.length,
+      filteredTasks: map[filter],
+    };
+  }, [tasks, filter]);
 
   const statTabs: { key: Filter; count: number; label: string; color: string; bg: string; activeBg: string }[] = [
     { key: 'active', count: activeCount, label: 'Активных', color: '#6C5CE7', bg: 'rgba(108,92,231,0.07)', activeBg: 'rgba(108,92,231,0.14)' },
@@ -225,4 +235,4 @@ export const TaskList: React.FC<TaskListProps> = ({ onEdit }) => {
       )}
     </div>
   );
-};
+});

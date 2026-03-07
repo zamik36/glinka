@@ -77,6 +77,26 @@ body {
   75% { transform: translate(15px, 5px) scale(1.02); }
 }
 
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes glare-sweep {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to   { transform: translateX(230%) skewX(-18deg); }
+}
+
+@keyframes bar-reveal {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes badge-in {
+  from { opacity: 0; transform: scale(0.75) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 @keyframes spin-slow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -108,6 +128,7 @@ body {
 
 .animate-blob {
   animation: blob-move 8s ease-in-out infinite;
+  will-change: transform;
 }
 
 .animate-spin-slow {
@@ -132,6 +153,36 @@ body {
     0 2px 6px rgba(108, 92, 231, 0.04);
 }
 
+/* Card entrance animation */
+.animate-card-in {
+  animation: card-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Glare sweep overlay (replaces framer-motion glare) */
+.glare-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.38) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+  animation: glare-sweep 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Accent bar (replaces framer-motion scaleX) */
+.bar-reveal {
+  height: 3px;
+  border-radius: 20px 20px 0 0;
+  transform-origin: left;
+  animation: bar-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Status badge entrance */
+.animate-badge-in {
+  animation: badge-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Gradient background blobs */
 .bg-blob {
   position: fixed;
@@ -140,6 +191,23 @@ body {
   opacity: 0.28;
   pointer-events: none;
   z-index: 0;
+}
+
+/* Respect system reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob,
+  .animate-card-in,
+  .glare-sweep,
+  .bar-reveal,
+  .animate-badge-in,
+  .animate-float,
+  .pulse-ring,
+  .animate-shimmer,
+  .animate-gradient,
+  .animate-fade-in-up {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* Input styling */

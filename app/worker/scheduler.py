@@ -110,6 +110,15 @@ class ReminderScheduler:
         logger.info("Added reminder %d via NOTIFY (remind_at=%s)", reminder_id, remind_at)
         return True
 
+    def retry_one(self, reminder_id: int, delay_s: float = 60.0) -> None:
+        """Re-schedule a failed reminder for retry after delay_s seconds."""
+        from datetime import timedelta
+        retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay_s)
+        self._known_ids.add(reminder_id)
+        heapq.heappush(self._heap, (retry_at, reminder_id))
+        self._wake_event.set()
+        logger.warning("Scheduled retry for reminder %d in %.0fs", reminder_id, delay_s)
+
     def mark_processed(self, reminder_id: int) -> None:
         self._known_ids.discard(reminder_id)
 
