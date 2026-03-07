@@ -137,7 +137,7 @@ services:
           memory: 256M
 
   promtail:
-    image: grafana/promtail:2.9.9
+    image: grafana/promtail:3.5.0
     restart: unless-stopped
     volumes:
       - ./monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
