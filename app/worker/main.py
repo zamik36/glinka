@@ -98,9 +98,9 @@ async def _process_loop(
 
                 except Exception as e:
                     await session.rollback()
-                    scheduler.mark_processed(reminder_id)
+                    scheduler.retry_one(reminder_id, delay_s=60.0)
                     reminders_failed_total.labels(reason=type(e).__name__).inc()
-                    logger.error("Failed to send reminder %d: %s", reminder_id, e)
+                    logger.error("Failed to send reminder %d, retrying in 60s: %s", reminder_id, e)
 
     while not shutdown_event.is_set():
         # Fix 8: try/except вокруг wait_for_next

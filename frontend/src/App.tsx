@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from './hooks/useTelegram';
 import { TaskList } from './pages/TaskList';
+import type { TaskListHandle } from './pages/TaskList';
 import { AddTask } from './pages/AddTask';
 import { FiPlus } from 'react-icons/fi';
 import type { Task } from './types';
@@ -10,7 +11,7 @@ const App: React.FC = () => {
   const { tg, expandApp } = useTelegram();
   const [showAddTask, setShowAddTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const taskListRef = useRef<TaskListHandle>(null);
 
   useEffect(() => {
     tg.ready();
@@ -20,7 +21,7 @@ const App: React.FC = () => {
   const handleTaskCreated = useCallback(() => {
     setShowAddTask(false);
     setEditingTask(null);
-    setRefreshKey(k => k + 1);
+    taskListRef.current?.reload();
   }, []);
 
   const handleEdit = useCallback((task: Task) => {
@@ -35,11 +36,10 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen relative" style={{ background: 'var(--surface)' }}>
-      {/* Decorative background blobs — visible through Liquid Glass cards */}
+      {/* Decorative background blobs — fixed position, GPU-promoted via will-change in CSS */}
       <div className="bg-blob animate-blob" style={{ width: 320, height: 320, background: '#6C5CE7', top: -90, right: -70 }} />
       <div className="bg-blob animate-blob" style={{ width: 260, height: 260, background: '#A29BFE', bottom: 80, left: -90, animationDelay: '-3s' }} />
       <div className="bg-blob animate-blob" style={{ width: 220, height: 220, background: '#C4B5FD', top: '38%', right: -50, animationDelay: '-5s' }} />
-      <div className="bg-blob animate-blob" style={{ width: 180, height: 180, background: '#818CF8', bottom: '30%', left: '30%', animationDelay: '-7s', opacity: 0.15 }} />
 
       {/* Header */}
       <header className="relative z-10 pt-6 pb-4 px-5">
@@ -62,7 +62,7 @@ const App: React.FC = () => {
 
       {/* Main content */}
       <main className="relative z-10 px-4 pb-28">
-        <TaskList key={refreshKey} onEdit={handleEdit} />
+        <TaskList ref={taskListRef} onEdit={handleEdit} />
       </main>
 
       {/* FAB — hidden when bottom sheet is open */}

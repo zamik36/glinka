@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow, isPast, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -25,28 +25,30 @@ const PulsingDot: React.FC<{ color: string }> = ({ color }) => (
   </span>
 );
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelete, onToggleComplete }) => {
-  const deadlineDate = new Date(task.deadline);
+export const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, index, onEdit, onDelete, onToggleComplete }) => {
+  const deadlineDate = useMemo(() => new Date(task.deadline), [task.deadline]);
   const isOverdue = !task.is_completed && isPast(deadlineDate);
   const isActive = !task.is_completed && !isOverdue;
 
-  let relativeText: string;
-  try {
-    relativeText = isOverdue
-      ? 'Просрочено'
-      : formatDistanceToNow(deadlineDate, { addSuffix: true, locale: ru });
-  } catch {
-    relativeText = '';
-  }
+  const { relativeText, dateText } = useMemo(() => {
+    let relText: string;
+    try {
+      relText = isOverdue
+        ? 'Просрочено'
+        : formatDistanceToNow(deadlineDate, { addSuffix: true, locale: ru });
+    } catch {
+      relText = '';
+    }
+    let dText: string;
+    try {
+      dText = format(deadlineDate, 'd MMM, HH:mm', { locale: ru });
+    } catch {
+      dText = deadlineDate.toLocaleString();
+    }
+    return { relativeText: relText, dateText: dText };
+  }, [deadlineDate, isOverdue]);
 
-  let dateText: string;
-  try {
-    dateText = format(deadlineDate, 'd MMM, HH:mm', { locale: ru });
-  } catch {
-    dateText = deadlineDate.toLocaleString();
-  }
-
-  const status = task.is_completed
+  const status = useMemo(() => task.is_completed
     ? {
         color: '#059669',
         glow: 'rgba(16,185,129,0.18)',
@@ -83,23 +85,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
           accentEnd: '#A29BFE',
           tint: 'rgba(108,92,231,0.04)',
           shadow: '0 4px 20px rgba(108,92,231,0.1)',
-        };
+        },
+  [task.is_completed, isOverdue]);
 
   const attachmentCount = task.attachments?.length ?? 0;
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 18, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, x: -20, scale: 0.94 }}
-      transition={{ delay: index * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      whileTap={{ scale: 0.975, transition: { duration: 0.12 } }}
-      className="mb-3 relative overflow-hidden"
+    <article
+      className="mb-3 relative overflow-hidden animate-card-in"
       style={{
+        animationDelay: `${index * 0.06}s`,
+        contain: 'layout style paint',
         borderRadius: 20,
-        background: 'linear-gradient(145deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.6) 100%)',
-        backdropFilter: 'blur(28px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+        // Higher opacity white gradient replaces backdropFilter — same glass look, zero GPU blur cost
+        background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.87) 100%)',
         border: '1px solid rgba(255,255,255,0.65)',
         boxShadow: [
           '0 0 0 0.5px rgba(255,255,255,0.45) inset',
@@ -133,32 +132,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
         }}
       />
 
-      {/* Glare sweep — one shot on card appear */}
-      <motion.div
-        initial={{ x: '-120%', skewX: -18 }}
-        animate={{ x: '230%', skewX: -18 }}
-        transition={{ delay: index * 0.06 + 0.05, duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          width: '38%',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.38) 50%, transparent 100%)',
-          pointerEvents: 'none',
-          zIndex: 2,
-        }}
+      {/* Glare sweep — CSS animation (compositor thread, no JS overhead) */}
+      <div
+        className="glare-sweep"
+        style={{ animationDelay: `${index * 0.06 + 0.05}s` }}
       />
 
-      {/* Accent bar — scaleX reveal from left */}
-      <motion.div
-        initial={{ scaleX: 0, originX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ delay: index * 0.06 + 0.1, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      {/* Accent bar — CSS scaleX reveal */}
+      <div
+        className="bar-reveal"
         style={{
-          height: 3,
+          animationDelay: `${index * 0.06 + 0.1}s`,
           background: `linear-gradient(90deg, ${status.accent} 0%, ${status.accentEnd} 60%, transparent 100%)`,
-          borderRadius: '20px 20px 0 0',
-          transformOrigin: 'left',
         }}
       />
 
@@ -182,7 +167,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
               background: task.is_completed
                 ? 'linear-gradient(135deg, #10B981, #34D399)'
                 : 'rgba(255,255,255,0.5)',
-              backdropFilter: 'blur(8px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -210,21 +194,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
             {task.text}
           </p>
 
-          {/* Status badge — glass pill */}
-          <motion.span
-            initial={{ opacity: 0, scale: 0.75, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: index * 0.06 + 0.22, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-shrink-0 inline-flex items-center gap-1.5 font-semibold"
+          {/* Status badge — glass pill (small element, minimal blur cost) */}
+          <span
+            className="flex-shrink-0 inline-flex items-center gap-1.5 font-semibold animate-badge-in"
             style={{
+              animationDelay: `${index * 0.06 + 0.22}s`,
               background: status.bg,
               color: status.color,
               fontSize: 11,
               padding: '4px 9px 4px 7px',
               borderRadius: 20,
               border: `1px solid ${status.border}`,
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               boxShadow: `0 2px 10px ${status.glow}`,
               marginTop: 1,
               whiteSpace: 'nowrap',
@@ -235,7 +217,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
               : <status.icon size={10} />
             }
             {status.label}
-          </motion.span>
+          </span>
         </div>
 
         {/* Row 2: date info + action buttons */}
@@ -287,8 +269,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
                 style={{
                   width: 34, height: 34, borderRadius: 11, border: 'none',
                   background: 'rgba(108,92,231,0.1)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   outline: '1px solid rgba(108,92,231,0.2)',
                   color: '#6C5CE7',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -307,8 +289,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
                 style={{
                   width: 34, height: 34, borderRadius: 11, border: 'none',
                   background: 'rgba(239,68,68,0.1)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   outline: '1px solid rgba(239,68,68,0.2)',
                   color: '#EF4444',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -321,6 +303,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit, onDelet
           </div>
         </div>
       </div>
-    </motion.article>
+    </article>
   );
-};
+});
