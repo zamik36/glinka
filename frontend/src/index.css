@@ -135,6 +135,45 @@ body {
   animation: spin-slow 12s linear infinite;
 }
 
+/* AddTask field entrance — CSS only, no JS Framer Motion overhead */
+@keyframes field-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-field-in {
+  animation: field-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Confetti particle: burst outward then fall with gravity.
+   animation-timing-function inside a keyframe controls easing TO the next keyframe. */
+@keyframes confetti-fly {
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.35, 1);
+  }
+  35% {
+    transform: translate(var(--tx), var(--ty)) scale(1.25);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.8);
+  }
+  100% {
+    transform: translate(var(--tx), calc(var(--ty) + 130px)) scale(0.45);
+    opacity: 0;
+  }
+}
+
+.confetti-particle {
+  position: fixed;
+  font-size: 24px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 9999;
+  transform-origin: center;
+  animation: confetti-fly 3.5s linear forwards;
+}
+
 /* Glass card */
 .card {
   background: var(--surface-card);
