@@ -98,14 +98,16 @@ async def health():
 app.include_router(router)
 
 if __name__ == "__main__":
+    import multiprocessing
     from granian import Granian
     from granian.constants import Interfaces
 
+    workers = max(2, min(4, multiprocessing.cpu_count()))
     Granian(
         "main_api:app",
         address="0.0.0.0",
         port=8000,
         interface=Interfaces.ASGI,
-        workers=4,
+        workers=workers,
         backlog=2048
     ).serve()

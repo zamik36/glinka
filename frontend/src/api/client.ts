@@ -1,5 +1,6 @@
 import { getTelegramInitData } from '../lib/telegram';
 import type { Task, TaskCreateRequest, TaskUpdateRequest } from '../types';
+import { mockApi } from './mock';
 
 const API_BASE = '/api';
 
@@ -62,7 +63,7 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   return response.json();
 }
 
-export const api = {
+const realApi = {
   getTasks: (): Promise<Task[]> => fetchWithAuth('/tasks'),
 
   createTask: (data: TaskCreateRequest): Promise<{ status: string; task_id: number }> => {
@@ -95,3 +96,7 @@ export const api = {
       body: JSON.stringify({ is_completed: isCompleted }),
     }),
 };
+
+// In dev mock mode the real backend is not needed.
+// Create a .env.local file with VITE_DEV_MOCK=true to enable.
+export const api = import.meta.env.VITE_DEV_MOCK === 'true' ? mockApi : realApi;

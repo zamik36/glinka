@@ -4,12 +4,14 @@ import { useTelegram } from './hooks/useTelegram';
 import { TaskList } from './pages/TaskList';
 import type { TaskListHandle } from './pages/TaskList';
 import { AddTask } from './pages/AddTask';
-import { FiPlus } from 'react-icons/fi';
+import { CalendarView } from './pages/CalendarView';
+import { FiPlus, FiCalendar, FiArrowLeft } from 'react-icons/fi';
 import type { Task } from './types';
 
 const App: React.FC = () => {
   const { tg, expandApp } = useTelegram();
   const [showAddTask, setShowAddTask] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const taskListRef = useRef<TaskListHandle>(null);
 
@@ -47,27 +49,120 @@ const App: React.FC = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
+          style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">📚</span>
-            <h1 className="text-2xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
-              Homework Tracker
-            </h1>
+          {/* Title block */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <AnimatePresence mode="wait" initial={false}>
+              {showCalendar ? (
+                <motion.div
+                  key="cal-title"
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <h1 className="text-2xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
+                    Календарь
+                  </h1>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    Задачи по датам
+                  </p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="main-title"
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 16 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-2xl">📚</span>
+                    <h1 className="text-2xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
+                      Homework Tracker
+                    </h1>
+                  </div>
+                  <p className="text-sm ml-10" style={{ color: 'var(--text-secondary)' }}>
+                    Не забывай про дедлайны
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <p className="text-sm ml-10" style={{ color: 'var(--text-secondary)' }}>
-            Не забывай про дедлайны
-          </p>
+
+          {/* Calendar toggle button — top-right */}
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={() => setShowCalendar(v => !v)}
+            style={{
+              width: 40, height: 40, borderRadius: 12, flexShrink: 0, marginTop: 2,
+              background: showCalendar
+                ? 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))'
+                : 'rgba(108, 92, 231, 0.1)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: showCalendar ? '0 4px 14px rgba(108, 92, 231, 0.35)' : 'none',
+            }}
+            aria-label={showCalendar ? 'Назад' : 'Календарь'}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {showCalendar ? (
+                <motion.span
+                  key="back"
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <FiArrowLeft style={{ color: '#fff', fontSize: 18 }} />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="cal"
+                  initial={{ opacity: 0, rotate: 90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: -90 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <FiCalendar style={{ color: 'var(--accent)', fontSize: 18 }} />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </motion.div>
       </header>
 
       {/* Main content */}
       <main className="relative z-10 px-4 pb-28">
-        <TaskList ref={taskListRef} onEdit={handleEdit} />
+        <AnimatePresence mode="wait" initial={false}>
+          {showCalendar ? (
+            <motion.div
+              key="calendar"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 40 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            >
+              <CalendarView />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="tasklist"
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            >
+              <TaskList ref={taskListRef} onEdit={handleEdit} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
-      {/* FAB — hidden when bottom sheet is open */}
+      {/* FAB — hidden when bottom sheet or calendar is open */}
       <AnimatePresence>
-        {!showAddTask && (
+        {!showAddTask && !showCalendar && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -93,7 +188,7 @@ const App: React.FC = () => {
           <>
             <motion.div
               className="fixed inset-0 z-40"
-              style={{ background: 'rgba(26, 26, 46, 0.4)', backdropFilter: 'blur(4px)' }}
+              style={{ background: 'rgba(15, 12, 35, 0.55)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -107,6 +202,8 @@ const App: React.FC = () => {
                 borderTopLeftRadius: 28,
                 borderTopRightRadius: 28,
                 boxShadow: '0 -8px 40px rgba(108, 92, 231, 0.15)',
+                overscrollBehavior: 'contain',
+                WebkitOverflowScrolling: 'touch',
               }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}

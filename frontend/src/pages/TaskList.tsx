@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useImperativeHandle, useRef, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import type { Task } from '../types';
-import { TaskCard } from '../components/TaskCard';
+import { TaskCard, ConfettiBurst } from '../components/TaskCard';
 import { FiBookOpen } from 'react-icons/fi';
 import { isPast } from 'date-fns';
 import { useTelegram } from '../hooks/useTelegram';
@@ -50,6 +50,8 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('active');
+  const [confettiBursts, setConfettiBursts] = useState<{ id: number; x: number; y: number }[]>([]);
+  const burstCounter = useRef(0);
   const { tg, hapticFeedback } = useTelegram();
 
   const loadTasks = useCallback(async () => {
@@ -82,6 +84,12 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
       }
     });
   }, [tg, hapticFeedback]);
+
+  const handleConfettiTrigger = useCallback((x: number, y: number) => {
+    const id = ++burstCounter.current;
+    setConfettiBursts(prev => [...prev, { id, x, y }]);
+    setTimeout(() => setConfettiBursts(prev => prev.filter(b => b.id !== id)), 4000);
+  }, []);
 
   const handleToggleComplete = useCallback(async (taskId: number, value: boolean) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
@@ -196,20 +204,9 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
             Нажми <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-white text-xs font-bold" style={{ background: '#6C5CE7' }}>+</span> чтобы начать
           </div>
         </motion.div>
-      ) : filteredTasks.length === 0 ? (
-        <motion.div
-          key={filter}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center mt-12"
-        >
-          <p className="text-base font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
-            {filter === 'done' && 'Нет выполненных заданий'}
-            {filter === 'overdue' && 'Нет просроченных заданий'}
-            {filter === 'active' && 'Нет активных заданий'}
-          </p>
-        </motion.div>
       ) : (
+        // Cards + empty-filter message share one AnimatePresence so
+        // the last card always plays its exit before the empty state appears.
         <AnimatePresence mode="wait">
           <motion.div
             key={filter}
@@ -220,19 +217,60 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
           >
             <AnimatePresence>
               {filteredTasks.map((task, i) => (
-                <TaskCard
+                <motion.div
                   key={task.id}
-                  task={task}
-                  index={i}
-                  onEdit={onEdit}
-                  onDelete={handleDelete}
-                  onToggleComplete={handleToggleComplete}
-                />
+                  layout
+                  exit={{
+                    height: 0,
+                    marginBottom: 0,
+                    opacity: 0,
+                    transition: {
+                      height:       { duration: 0.45, ease: 'easeInOut' },
+                      marginBottom: { duration: 0.45, ease: 'easeInOut' },
+                      opacity:      { duration: 0.25, ease: 'easeIn' },
+                    },
+                  }}
+                  transition={{ layout: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <TaskCard
+                    task={task}
+                    index={i}
+                    onEdit={onEdit}
+                    onDelete={handleDelete}
+                    onToggleComplete={handleToggleComplete}
+                    onConfettiTrigger={handleConfettiTrigger}
+                  />
+                </motion.div>
               ))}
+            </AnimatePresence>
+
+            {/* Empty-filter message — appears after all cards have exited */}
+            <AnimatePresence>
+              {filteredTasks.length === 0 && (
+                <motion.div
+                  key="filter-empty"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25, delay: 0.1 }}
+                  className="flex flex-col items-center justify-center mt-12"
+                >
+                  <p className="text-base font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                    {filter === 'done'    && 'Нет выполненных заданий'}
+                    {filter === 'overdue' && 'Нет просроченных заданий'}
+                    {filter === 'active'  && 'Нет активных заданий'}
+                  </p>
+                </motion.div>
+              )}
             </AnimatePresence>
           </motion.div>
         </AnimatePresence>
       )}
+
+      {confettiBursts.map(b => (
+        <ConfettiBurst key={b.id} originX={b.x} originY={b.y} />
+      ))}
     </div>
   );
 });
