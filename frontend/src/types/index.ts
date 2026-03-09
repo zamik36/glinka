@@ -18,9 +18,11 @@ export interface TaskCreateRequest {
   text: string;
   deadline: string;
   files?: File[];
+  reminder_at?: string[];
 }
 
 export interface TaskUpdateRequest {
   text: string;
   deadline: string;
+  reminder_at?: string[];
 }

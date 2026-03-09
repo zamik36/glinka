@@ -77,6 +77,12 @@ const realApi = {
       }
     }
 
+    if (data.reminder_at) {
+      for (const r of data.reminder_at) {
+        formData.append('reminder_at', r);
+      }
+    }
+
     return fetchWithAuth('/tasks', { method: 'POST', body: formData });
   },
 
@@ -84,6 +90,13 @@ const realApi = {
     const formData = new FormData();
     formData.append('text', data.text);
     formData.append('deadline', data.deadline);
+
+    if (data.reminder_at) {
+      for (const r of data.reminder_at) {
+        formData.append('reminder_at', r);
+      }
+    }
+
     return fetchWithAuth(`/tasks/${taskId}`, { method: 'PUT', body: formData });
   },
 

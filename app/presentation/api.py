@@ -30,12 +30,28 @@ class TaskResponse(BaseModel):
     reminder_status: Optional[Literal["pending", "sent"]] = None
     attachments: list[AttachmentResponse] = []
 
+def _parse_reminder_times(raw: list[str]) -> list[datetime]:
+    now = datetime.now(timezone.utc)
+    result: list[datetime] = []
+    for r in raw:
+        try:
+            dt = datetime.fromisoformat(r)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid reminder_at format: {r!r}")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        if dt > now:
+            result.append(dt)
+    return result
+
+
 @router.post("")
 @limiter.limit("20/minute")
 async def create_task(
     request: Request,
     text: str = Form(..., min_length=1, max_length=2000),
     deadline: str = Form(...),
+    reminder_at: list[str] = Form(default=[]),
     files: list[UploadFile] = File(default=[]),
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
@@ -68,7 +84,8 @@ async def create_task(
                 size=size,
             ))
 
-    task = await service.create_task_with_reminder(user_id, text, deadline_dt, attachments or None)
+    reminder_times = _parse_reminder_times(reminder_at) if reminder_at else None
+    task = await service.create_task_with_reminder(user_id, text, deadline_dt, attachments or None, reminder_times)
     await session.commit()
     return {"status": "success", "task_id": task.id}
 
@@ -77,6 +94,7 @@ async def update_task(
     task_id: int,
     text: str = Form(..., min_length=1, max_length=2000),
     deadline: str = Form(...),
+    reminder_at: list[str] = Form(default=[]),
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
     session: AsyncSession = Depends(get_db_session),
@@ -92,7 +110,8 @@ async def update_task(
     if deadline_dt <= datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Deadline must be in the future")
 
-    await service.update_task(task_id, user_id, text, deadline_dt)
+    reminder_times = _parse_reminder_times(reminder_at) if reminder_at else None
+    await service.update_task(task_id, user_id, text, deadline_dt, reminder_times)
     await session.commit()
     return {"status": "success"}
 

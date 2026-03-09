@@ -1,30 +1,44 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from './hooks/useTelegram';
 import { TaskList } from './pages/TaskList';
-import type { TaskListHandle } from './pages/TaskList';
 import { AddTask } from './pages/AddTask';
-import { CalendarView } from './pages/CalendarView';
 import { FiPlus, FiCalendar, FiArrowLeft } from 'react-icons/fi';
+import { api } from './api/client';
 import type { Task } from './types';
+
+const CalendarView = lazy(() => import('./pages/CalendarView'));
 
 const App: React.FC = () => {
   const { tg, expandApp } = useTelegram();
   const [showAddTask, setShowAddTask] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const taskListRef = useRef<TaskListHandle>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadTasks = useCallback(async () => {
+    try {
+      const data = await api.getTasks();
+      setTasks(data);
+    } catch (error) {
+      console.error('Failed to load tasks:', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     tg.ready();
     expandApp();
-  }, [tg, expandApp]);
+    loadTasks();
+  }, [tg, expandApp, loadTasks]);
 
   const handleTaskCreated = useCallback(() => {
     setShowAddTask(false);
     setEditingTask(null);
-    taskListRef.current?.reload();
-  }, []);
+    loadTasks();
+  }, [loadTasks]);
 
   const handleEdit = useCallback((task: Task) => {
     setEditingTask(task);
@@ -144,7 +158,9 @@ const App: React.FC = () => {
               exit={{ opacity: 0, x: 40 }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             >
-              <CalendarView />
+              <Suspense fallback={<div className="h-64 animate-shimmer rounded-3xl" />}>
+                <CalendarView tasks={tasks} isLoading={isLoading} />
+              </Suspense>
             </motion.div>
           ) : (
             <motion.div
@@ -154,7 +170,7 @@ const App: React.FC = () => {
               exit={{ opacity: 0, x: -40 }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             >
-              <TaskList ref={taskListRef} onEdit={handleEdit} />
+              <TaskList tasks={tasks} isLoading={isLoading} setTasks={setTasks} onEdit={handleEdit} />
             </motion.div>
           )}
         </AnimatePresence>
