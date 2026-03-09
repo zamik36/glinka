@@ -551,6 +551,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ty" },
+    { name = "types-cachetools" },
 ]
 
 [package.metadata]
@@ -580,6 +581,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.25" },
     { name = "pytest-cov", specifier = ">=6.0" },
     { name = "ty", specifier = ">=0.0.1a7" },
+    { name = "types-cachetools", specifier = ">=5.3" },
 ]
 
 [[package]]
@@ -1488,6 +1490,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/48/88/36c652c658fe96658043e4abc8ea97801de6fb6e63ab50aaa82807bff1d8/ty-0.0.20-py3-none-win32.whl", hash = "sha256:c7d32bfe93f8fcaa52b6eef3f1b930fd7da410c2c94e96f7412c30cfbabf1d17", size = 9744206, upload-time = "2026-03-02T15:51:54.183Z" },
     { url = "https://files.pythonhosted.org/packages/ff/a7/a4a13bed1d7fd9d97aaa3c5bb5e6d3e9a689e6984806cbca2ab4c9233cac/ty-0.0.20-py3-none-win_amd64.whl", hash = "sha256:a5e10f40fc4a0a1cbcb740a4aad5c7ce35d79f030836ea3183b7a28f43170248", size = 10711999, upload-time = "2026-03-02T15:51:29.212Z" },
     { url = "https://files.pythonhosted.org/packages/8d/7e/6bfd748a9f4ff9267ed3329b86a0f02cdf6ab49f87bc36c8a164852f99fc/ty-0.0.20-py3-none-win_arm64.whl", hash = "sha256:53f7a5c12c960e71f160b734f328eff9a35d578af4b67a36b0bb5990ac5cdc27", size = 10150143, upload-time = "2026-03-02T15:51:31.283Z" },
+]
+
+[[package]]
+name = "types-cachetools"
+version = "6.2.0.20251022"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/a8/f9bcc7f1be63af43ef0170a773e2d88817bcc7c9d8769f2228c802826efe/types_cachetools-6.2.0.20251022.tar.gz", hash = "sha256:f1d3c736f0f741e89ec10f0e1b0138625023e21eb33603a930c149e0318c0cef", size = 9608, upload-time = "2025-10-22T03:03:58.16Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/98/2d/8d821ed80f6c2c5b427f650bf4dc25b80676ed63d03388e4b637d2557107/types_cachetools-6.2.0.20251022-py3-none-any.whl", hash = "sha256:698eb17b8f16b661b90624708b6915f33dbac2d185db499ed57e4997e7962cad", size = 9341, upload-time = "2025-10-22T03:03:57.036Z" },
 ]
 
 [[package]]

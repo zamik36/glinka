@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from datetime import timedelta, datetime, timezone
 from typing import Any
 
@@ -8,6 +10,8 @@ from app.domain.entities import Task, Reminder, Attachment
 from app.domain.exceptions import TaskNotFoundError, ForbiddenError
 from app.domain.interfaces import TaskRepository, ReminderRepository, AttachmentRepository
 from app.infrastructure.file_storage import FileStorageService
+
+logger = logging.getLogger(__name__)
 
 # Module-level cache: shared across all TaskService instances in the same process.
 # Key: user_id (int), Value: list[dict] task list.
@@ -54,7 +58,8 @@ class TaskService:
         task = Task(user_id=user_id, text=text, deadline=deadline)
         created_task = await self.task_repo.create(task)
 
-        assert created_task.id is not None
+        if created_task.id is None:
+            raise RuntimeError("Task creation failed: id is None after flush")
 
         for rt in _calculate_remind_times(deadline):
             reminder = Reminder(task_id=created_task.id, remind_at=rt)
@@ -91,9 +96,14 @@ class TaskService:
             raise ForbiddenError(task_id)
 
         paths = await self.attachment_repo.delete_by_task(task_id)
-        if self.file_storage:
-            for path in paths:
-                await self.file_storage.delete(path)
+        if self.file_storage and paths:
+            results = await asyncio.gather(
+                *(self.file_storage.delete(p) for p in paths),
+                return_exceptions=True,
+            )
+            for path, result in zip(paths, results):
+                if isinstance(result, Exception):
+                    logger.warning("Failed to delete file %s: %s", path, result)
 
         await self.reminder_repo.delete_by_task(task_id)
         await self.task_repo.delete(task_id)
