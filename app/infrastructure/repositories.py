@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,7 +96,7 @@ class PostgresTaskRepository(TaskRepository):
             ],
         }
 
-    async def update(self, task_id: int, text: str, deadline: object) -> None:
+    async def update(self, task_id: int, text: str, deadline: datetime) -> None:
         stmt = (
             update(TaskModel)
             .where(TaskModel.id == task_id)

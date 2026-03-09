@@ -5,15 +5,14 @@ from time import perf_counter
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from app.presentation.api import router
 from app.core.config import settings
 from app.core.logging_config import configure_logging
-from app.infrastructure.database import engine, AsyncSessionLocal
+from app.infrastructure.database import engine
 from app.domain.exceptions import TaskNotFoundError, ForbiddenError
 from app.core.utils import get_real_ip
 
@@ -61,13 +60,29 @@ Instrumentator(
 ).instrument(app).expose(app, endpoint="/metrics")
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[override]
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        return response
+class SecurityHeadersMiddleware:
+    _HEADERS = [
+        (b"x-content-type-options", b"nosniff"),
+        (b"x-frame-options", b"DENY"),
+        (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    ]
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.extend(self._HEADERS)
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -99,8 +114,8 @@ async def log_requests(request: Request, call_next):
 @app.get("/health", include_in_schema=False)
 async def health():
     try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(text("SELECT 1"))
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
         return JSONResponse({"status": "ok", "service": "api"})
     except Exception as e:
         logger.error("Health check failed: %s", e)

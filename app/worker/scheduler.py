@@ -1,9 +1,9 @@
 import asyncio
 import heapq
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.models import ReminderModel
@@ -24,9 +24,10 @@ class ReminderScheduler:
         self._wake_event = asyncio.Event()
         self._shutdown = False
 
-    async def load_from_db(self, session: AsyncSession) -> int:
+    async def load_from_db(self, session: AsyncSession, horizon_hours: int = 24) -> int:
         stmt = select(ReminderModel.id, ReminderModel.remind_at).where(
             ReminderModel.status == "pending",
+            ReminderModel.remind_at <= func.now() + timedelta(hours=horizon_hours),
         )
         result = await session.execute(stmt)
         rows = result.all()

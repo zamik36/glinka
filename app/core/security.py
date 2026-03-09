@@ -29,9 +29,9 @@ def validate_telegram_data(init_data: str) -> dict:
         if not user_json:
             raise ValueError("Missing 'user' field in initData")
         return json.loads(user_json)
-    except (json.JSONDecodeError, ValueError) as e:
+    except (json.JSONDecodeError, ValueError, KeyError) as e:
         logger.warning("initData validation failed: %s: %s", type(e).__name__, e)
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram initData")
-    except Exception as e:
-        logger.warning("initData validation failed unexpectedly: %s", type(e).__name__)
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram initData")
+    except Exception:
+        logger.exception("Unexpected error during initData validation")
+        raise HTTPException(status_code=500, detail="Internal server error")

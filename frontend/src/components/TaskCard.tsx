@@ -125,10 +125,10 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
   const status = useMemo(() => {
     if (task.is_completed)
       return { color: '#059669', glow: 'rgba(16,185,129,0.18)',  bg: 'rgba(16,185,129,0.13)',  border: 'rgba(16,185,129,0.25)',  icon: FiCheckCircle,   label: 'Готово',     accent: '#10B981', accentEnd: '#34D399', tint: 'rgba(16,185,129,0.04)',  shadow: '0 4px 20px rgba(16,185,129,0.12)' };
-    if (isOverdue)
-      return { color: '#DC2626', glow: 'rgba(239,68,68,0.2)',    bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)',   icon: FiAlertTriangle, label: 'Просрочено', accent: '#EF4444', accentEnd: '#F87171', tint: 'rgba(239,68,68,0.05)',   shadow: '0 4px 20px rgba(239,68,68,0.12)' };
     if (task.reminder_status === 'sent')
       return { color: '#D97706', glow: 'rgba(217,119,6,0.18)',   bg: 'rgba(217,119,6,0.10)',   border: 'rgba(217,119,6,0.22)',   icon: FiBell,          label: 'Напомнено',  accent: '#F59E0B', accentEnd: '#FCD34D', tint: 'rgba(217,119,6,0.04)',   shadow: '0 4px 20px rgba(217,119,6,0.10)' };
+    if (isOverdue)
+      return { color: '#DC2626', glow: 'rgba(239,68,68,0.2)',    bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)',   icon: FiAlertTriangle, label: 'Просрочено', accent: '#EF4444', accentEnd: '#F87171', tint: 'rgba(239,68,68,0.05)',   shadow: '0 4px 20px rgba(239,68,68,0.12)' };
     return   { color: '#7C3AED', glow: 'rgba(124,58,237,0.2)',   bg: 'rgba(124,58,237,0.1)',   border: 'rgba(124,58,237,0.2)',   icon: FiClock,         label: 'В работе',   accent: '#6C5CE7', accentEnd: '#A29BFE', tint: 'rgba(108,92,231,0.04)', shadow: '0 4px 20px rgba(108,92,231,0.1)' };
   }, [task.is_completed, task.reminder_status, isOverdue]);
 

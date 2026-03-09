@@ -38,11 +38,11 @@ async def send_reminder_with_attachments(bot: Bot, chat_id: int, text: str, atta
         await bot.send_message(chat_id=chat_id, text=caption, parse_mode="HTML")
         return
 
-    valid_attachments = []
-    for att in attachments:
-        full_path = os.path.join(settings.FILE_STORAGE_DIR, att["stored_path"])
-        if await asyncio.to_thread(os.path.exists, full_path):
-            valid_attachments.append({**att, "full_path": full_path})
+    valid_attachments = [
+        {**att, "full_path": full_path}
+        for att in attachments
+        if os.path.exists(full_path := os.path.join(settings.FILE_STORAGE_DIR, att["stored_path"]))
+    ]
 
     if not valid_attachments:
         await bot.send_message(chat_id=chat_id, text=caption, parse_mode="HTML")
@@ -166,7 +166,7 @@ async def _listen_loop(
                 try:
                     await conn.close()
                 except Exception:
-                    pass
+                    logger.debug("Error closing LISTEN connection", exc_info=True)
 
 
 async def _fallback_sync_loop(
