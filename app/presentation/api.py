@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from pydantic import BaseModel
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 from app.presentation.dependencies import get_current_user, get_task_service, get_file_storage
 from app.application.task_services import TaskService
 from app.infrastructure.file_storage import FileStorageService
@@ -11,7 +10,8 @@ from app.domain.entities import Attachment
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database import get_db_session
 
-limiter = Limiter(key_func=get_remote_address)
+from app.core.utils import get_real_ip
+limiter = Limiter(key_func=get_real_ip)
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
 
@@ -27,6 +27,7 @@ class TaskResponse(BaseModel):
     deadline: datetime
     is_completed: bool
     created_at: datetime
+    reminder_status: Optional[Literal["pending", "sent"]] = None
     attachments: list[AttachmentResponse] = []
 
 @router.post("")

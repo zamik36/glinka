@@ -5,7 +5,7 @@ import { formatDistanceToNow, isPast, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import {
   FiPaperclip, FiClock, FiCheckCircle, FiAlertTriangle,
-  FiEdit2, FiTrash2, FiCalendar, FiCheck,
+  FiEdit2, FiTrash2, FiCalendar, FiCheck, FiBell,
 } from 'react-icons/fi';
 import type { Task } from '../types';
 
@@ -106,8 +106,8 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
   task, index, onEdit, onDelete, onToggleComplete, onConfettiTrigger,
 }) => {
   const deadlineDate = useMemo(() => new Date(task.deadline), [task.deadline]);
-  const isOverdue = !task.is_completed && isPast(deadlineDate);
-  const isActive  = !task.is_completed && !isOverdue;
+  const isOverdue    = !task.is_completed && isPast(deadlineDate);
+  const isInProgress = !task.is_completed && !isOverdue && task.reminder_status !== 'sent';
 
   const { relativeText, dateText } = useMemo(() => {
     let relText = '';
@@ -122,12 +122,15 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
     return { relativeText: relText, dateText: dText };
   }, [deadlineDate, isOverdue]);
 
-  const status = useMemo(() => task.is_completed
-    ? { color: '#059669', glow: 'rgba(16,185,129,0.18)', bg: 'rgba(16,185,129,0.13)', border: 'rgba(16,185,129,0.25)', icon: FiCheckCircle, label: 'Готово',     accent: '#10B981', accentEnd: '#34D399', tint: 'rgba(16,185,129,0.04)',  shadow: '0 4px 20px rgba(16,185,129,0.12)' }
-    : isOverdue
-      ? { color: '#DC2626', glow: 'rgba(239,68,68,0.2)',  bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)', icon: FiAlertTriangle, label: 'Просрочено', accent: '#EF4444', accentEnd: '#F87171', tint: 'rgba(239,68,68,0.05)',   shadow: '0 4px 20px rgba(239,68,68,0.12)' }
-      : { color: '#7C3AED', glow: 'rgba(124,58,237,0.2)', bg: 'rgba(124,58,237,0.1)', border: 'rgba(124,58,237,0.2)', icon: FiClock,        label: 'В работе',   accent: '#6C5CE7', accentEnd: '#A29BFE', tint: 'rgba(108,92,231,0.04)', shadow: '0 4px 20px rgba(108,92,231,0.1)' },
-  [task.is_completed, isOverdue]);
+  const status = useMemo(() => {
+    if (task.is_completed)
+      return { color: '#059669', glow: 'rgba(16,185,129,0.18)',  bg: 'rgba(16,185,129,0.13)',  border: 'rgba(16,185,129,0.25)',  icon: FiCheckCircle,   label: 'Готово',     accent: '#10B981', accentEnd: '#34D399', tint: 'rgba(16,185,129,0.04)',  shadow: '0 4px 20px rgba(16,185,129,0.12)' };
+    if (isOverdue)
+      return { color: '#DC2626', glow: 'rgba(239,68,68,0.2)',    bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)',   icon: FiAlertTriangle, label: 'Просрочено', accent: '#EF4444', accentEnd: '#F87171', tint: 'rgba(239,68,68,0.05)',   shadow: '0 4px 20px rgba(239,68,68,0.12)' };
+    if (task.reminder_status === 'sent')
+      return { color: '#D97706', glow: 'rgba(217,119,6,0.18)',   bg: 'rgba(217,119,6,0.10)',   border: 'rgba(217,119,6,0.22)',   icon: FiBell,          label: 'Напомнено',  accent: '#F59E0B', accentEnd: '#FCD34D', tint: 'rgba(217,119,6,0.04)',   shadow: '0 4px 20px rgba(217,119,6,0.10)' };
+    return   { color: '#7C3AED', glow: 'rgba(124,58,237,0.2)',   bg: 'rgba(124,58,237,0.1)',   border: 'rgba(124,58,237,0.2)',   icon: FiClock,         label: 'В работе',   accent: '#6C5CE7', accentEnd: '#A29BFE', tint: 'rgba(108,92,231,0.04)', shadow: '0 4px 20px rgba(108,92,231,0.1)' };
+  }, [task.is_completed, task.reminder_status, isOverdue]);
 
   const attachmentCount = task.attachments?.length ?? 0;
 
@@ -156,7 +159,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
   }, [task.id, task.is_completed, onToggleComplete, onConfettiTrigger]);
 
   return (
-    <motion.article
+    <article
       className="mb-3 relative animate-card-in"
       style={{
         animationDelay: `${index * 0.06}s`,
@@ -267,15 +270,13 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
               padding: '4px 9px 4px 7px',
               borderRadius: 20,
               border: `1px solid ${status.border}`,
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
               boxShadow: `0 2px 10px ${status.glow}`,
               marginTop: 1,
               whiteSpace: 'nowrap',
               transition: 'background 0.25s ease, color 0.25s ease, border-color 0.25s ease',
             }}
           >
-            {isActive ? <PulsingDot color={status.color} /> : <status.icon size={10} />}
+            {isInProgress ? <PulsingDot color={status.color} /> : <status.icon size={10} />}
             {status.label}
           </span>
         </div>
@@ -313,8 +314,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 aria-label="Редактировать"
                 style={{
                   width: 34, height: 34, borderRadius: 11, border: 'none',
-                  background: 'rgba(108,92,231,0.1)',
-                  backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                  background: 'rgba(108,92,231,0.14)',
                   outline: '1px solid rgba(108,92,231,0.2)',
                   color: '#6C5CE7',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -332,8 +332,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 aria-label="Удалить"
                 style={{
                   width: 34, height: 34, borderRadius: 11, border: 'none',
-                  background: 'rgba(239,68,68,0.1)',
-                  backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                  background: 'rgba(239,68,68,0.14)',
                   outline: '1px solid rgba(239,68,68,0.2)',
                   color: '#EF4444',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -346,6 +345,6 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
           </div>
         </div>
       </div>
-    </motion.article>
+    </article>
   );
 });

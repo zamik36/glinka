@@ -1,14 +1,23 @@
 from datetime import timedelta, datetime, timezone
 from typing import Any
 
-from fastapi import HTTPException
+from cachetools import TTLCache
 
+from app.core.config import settings
 from app.domain.entities import Task, Reminder, Attachment
+from app.domain.exceptions import TaskNotFoundError, ForbiddenError
 from app.domain.interfaces import TaskRepository, ReminderRepository, AttachmentRepository
 from app.infrastructure.file_storage import FileStorageService
 
+# Module-level cache: shared across all TaskService instances in the same process.
+# Key: user_id (int), Value: list[dict] task list.
+# TTL-based invalidation covers the case where the worker (separate process) marks
+# a reminder as sent — eventual consistency within TASK_CACHE_TTL_SECONDS.
+_task_cache: TTLCache = TTLCache(maxsize=1024, ttl=settings.TASK_CACHE_TTL_SECONDS)
+
 REMIND_DAYS_BEFORE = [2, 1]
 REMIND_HOUR = 15
+DEFAULT_LIMIT = 50
 
 
 def _calculate_remind_times(deadline: datetime) -> list[datetime]:
@@ -56,14 +65,15 @@ class TaskService:
                 att.task_id = created_task.id
                 await self.attachment_repo.create(att)
 
+        self._invalidate_cache(user_id)
         return created_task
 
     async def update_task(self, task_id: int, user_id: int, text: str, deadline: datetime) -> None:
         task = await self.task_repo.get_by_id(task_id, for_update=True)
         if task is None:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise TaskNotFoundError(task_id)
         if task["user_id"] != user_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            raise ForbiddenError(task_id)
 
         await self.task_repo.update(task_id, text, deadline)
 
@@ -71,12 +81,14 @@ class TaskService:
         for rt in _calculate_remind_times(deadline):
             await self.reminder_repo.create(Reminder(task_id=task_id, remind_at=rt))
 
+        self._invalidate_cache(user_id)
+
     async def delete_task(self, task_id: int, user_id: int) -> None:
         task = await self.task_repo.get_by_id(task_id, for_update=True)
         if task is None:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise TaskNotFoundError(task_id)
         if task["user_id"] != user_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            raise ForbiddenError(task_id)
 
         paths = await self.attachment_repo.delete_by_task(task_id)
         if self.file_storage:
@@ -85,14 +97,24 @@ class TaskService:
 
         await self.reminder_repo.delete_by_task(task_id)
         await self.task_repo.delete(task_id)
+        self._invalidate_cache(user_id)
 
-    async def get_user_tasks(self, user_id: int, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
-        return await self.task_repo.get_by_user(user_id, limit=limit, offset=offset)
+    async def get_user_tasks(self, user_id: int, limit: int = DEFAULT_LIMIT, offset: int = 0) -> list[dict[str, Any]]:
+        if limit == DEFAULT_LIMIT and offset == 0 and user_id in _task_cache:
+            return _task_cache[user_id]
+        result = await self.task_repo.get_by_user(user_id, limit=limit, offset=offset)
+        if limit == DEFAULT_LIMIT and offset == 0:
+            _task_cache[user_id] = list(result)  # store a copy to prevent external mutation
+        return result
+
+    def _invalidate_cache(self, user_id: int) -> None:
+        _task_cache.pop(user_id, None)
 
     async def toggle_complete(self, task_id: int, user_id: int, is_completed: bool) -> None:
         task = await self.task_repo.get_by_id(task_id, for_update=True)
         if task is None:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise TaskNotFoundError(task_id)
         if task["user_id"] != user_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            raise ForbiddenError(task_id)
         await self.task_repo.toggle_complete(task_id, is_completed)
+        self._invalidate_cache(user_id)

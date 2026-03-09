@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
 from app.domain.interfaces import TaskRepository, ReminderRepository, AttachmentRepository
-from app.domain.entities import Task, Reminder, Attachment
+from app.domain.entities import Task, Reminder, Attachment, ReminderStatus
 from app.infrastructure.models import TaskModel, ReminderModel, AttachmentModel
 
 class PostgresTaskRepository(TaskRepository):
@@ -21,7 +21,10 @@ class PostgresTaskRepository(TaskRepository):
     async def get_by_user(self, user_id: int, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         stmt = (
             select(TaskModel)
-            .options(selectinload(TaskModel.attachments))
+            .options(
+                selectinload(TaskModel.attachments),
+                selectinload(TaskModel.reminders),
+            )
             .where(TaskModel.user_id == user_id)
             .order_by(TaskModel.deadline)
             .limit(limit)
@@ -30,6 +33,13 @@ class PostgresTaskRepository(TaskRepository):
         result = await self.session.execute(stmt)
         tasks = []
         for row in result.scalars().all():
+            statuses = [r.status for r in row.reminders]
+            if not statuses:
+                reminder_status = None
+            elif all(s == ReminderStatus.SENT for s in statuses):
+                reminder_status = ReminderStatus.SENT
+            else:
+                reminder_status = ReminderStatus.PENDING
             task_dict = {
                 "id": row.id,
                 "user_id": row.user_id,
@@ -37,6 +47,7 @@ class PostgresTaskRepository(TaskRepository):
                 "deadline": row.deadline,
                 "is_completed": row.is_completed,
                 "created_at": row.created_at,
+                "reminder_status": reminder_status,
                 "attachments": [
                     {
                         "id": a.id,
@@ -115,7 +126,7 @@ class PostgresReminderRepository(ReminderRepository):
             .join(TaskModel, ReminderModel.task_id == TaskModel.id)
             .where(
                 ReminderModel.id == reminder_id,
-                ReminderModel.is_sent == False,  # noqa: E712
+                ReminderModel.status == ReminderStatus.PENDING,
             )
             .with_for_update(skip_locked=True, of=ReminderModel)
         )
@@ -141,7 +152,7 @@ class PostgresReminderRepository(ReminderRepository):
             select(ReminderModel, TaskModel)
             .join(TaskModel, ReminderModel.task_id == TaskModel.id)
             .where(
-                ReminderModel.is_sent == False,
+                ReminderModel.status == ReminderStatus.PENDING,
                 ReminderModel.remind_at <= func.now()
             )
             .order_by(ReminderModel.remind_at.asc())
@@ -179,7 +190,7 @@ class PostgresReminderRepository(ReminderRepository):
         stmt = (
             update(ReminderModel)
             .where(ReminderModel.id == reminder_id)
-            .values(is_sent=True)
+            .values(status=ReminderStatus.SENT)
         )
         await self.session.execute(stmt)
 
@@ -187,7 +198,7 @@ class PostgresReminderRepository(ReminderRepository):
         stmt = (
             select(func.count())
             .select_from(ReminderModel)
-            .where(ReminderModel.task_id == task_id, ReminderModel.is_sent == False)
+            .where(ReminderModel.task_id == task_id, ReminderModel.status == ReminderStatus.PENDING)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one() > 0

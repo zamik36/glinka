@@ -8,13 +8,14 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from app.presentation.api import router
 from app.core.config import settings
 from app.core.logging_config import configure_logging
 from app.infrastructure.database import engine, AsyncSessionLocal
+from app.domain.exceptions import TaskNotFoundError, ForbiddenError
+from app.core.utils import get_real_ip
 
 # Prometheus multiprocess mode — must be set before prometheus_client is imported
 _prom_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR", "/tmp/prom_mp")
@@ -26,7 +27,8 @@ from prometheus_fastapi_instrumentator import Instrumentator  # noqa: E402
 configure_logging(settings.DEBUG)
 logger = logging.getLogger("app.api")
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+
+limiter = Limiter(key_func=get_real_ip, default_limits=["60/minute"])
 
 
 @asynccontextmanager
@@ -42,6 +44,16 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(TaskNotFoundError)
+async def task_not_found_handler(request: Request, exc: TaskNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": "Task not found"})
+
+
+@app.exception_handler(ForbiddenError)
+async def forbidden_handler(request: Request, exc: ForbiddenError) -> JSONResponse:
+    return JSONResponse(status_code=403, content={"detail": "Forbidden"})
 
 Instrumentator(
     should_group_status_codes=True,

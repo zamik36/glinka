@@ -1,6 +1,12 @@
+import enum
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
+
+
+class ReminderStatus(str, enum.Enum):
+    PENDING = "pending"
+    SENT    = "sent"
 
 class User(BaseModel):
     tg_id: int
@@ -18,7 +24,7 @@ class Reminder(BaseModel):
     id: Optional[int] = None
     task_id: int
     remind_at: datetime
-    is_sent: bool = False
+    status: ReminderStatus = ReminderStatus.PENDING
 
 class Attachment(BaseModel):
     id: Optional[int] = None
