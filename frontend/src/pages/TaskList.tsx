@@ -42,6 +42,8 @@ const SkeletonCard: React.FC = () => (
   </div>
 );
 
+const PAGE_SIZE = 20;
+
 type TaskListProps = {
   onEdit?: (task: Task) => void;
 };
@@ -50,6 +52,7 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('active');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [confettiBursts, setConfettiBursts] = useState<{ id: number; x: number; y: number }[]>([]);
   const burstCounter = useRef(0);
   const { tg, hapticFeedback } = useTelegram();
@@ -102,6 +105,9 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
     }
   }, [hapticFeedback]);
 
+  // Reset pagination when filter changes
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [filter]);
+
   // Single pass through tasks — no repeated iterations on every render
   const { overdueCount, activeCount, doneCount, filteredTasks } = useMemo(() => {
     const overdue: Task[] = [], active: Task[] = [], done: Task[] = [];
@@ -110,6 +116,17 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
       else if (isPast(new Date(t.deadline))) overdue.push(t);
       else active.push(t);
     }
+    // Sort active: tasks with sent reminders appear before pending ones.
+    // Precompute rank + deadline ms to avoid repeated allocations in comparator.
+    type Keyed = { task: Task; rank: number; deadlineMs: number };
+    const keyed: Keyed[] = active.map(t => ({
+      task: t,
+      rank: t.reminder_status === 'sent' ? 0 : 1,
+      deadlineMs: new Date(t.deadline).getTime(),
+    }));
+    keyed.sort((a, b) => a.rank - b.rank || a.deadlineMs - b.deadlineMs);
+    active.length = 0;
+    for (const k of keyed) active.push(k.task);
     const map: Record<Filter, Task[]> = { active, done, overdue };
     return {
       overdueCount: overdue.length,
@@ -216,7 +233,7 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
             transition={{ duration: 0.2 }}
           >
             <AnimatePresence>
-              {filteredTasks.map((task, i) => (
+              {filteredTasks.slice(0, visibleCount).map((task, i) => (
                 <motion.div
                   key={task.id}
                   layout
@@ -230,12 +247,11 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
                       opacity:      { duration: 0.25, ease: 'easeIn' },
                     },
                   }}
-                  transition={{ layout: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } }}
                   style={{ overflow: 'hidden' }}
                 >
                   <TaskCard
                     task={task}
-                    index={i}
+                    index={Math.min(i, 11)}
                     onEdit={onEdit}
                     onDelete={handleDelete}
                     onToggleComplete={handleToggleComplete}
@@ -244,6 +260,26 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
                 </motion.div>
               ))}
             </AnimatePresence>
+
+            {filteredTasks.length > visibleCount && (
+              <button
+                onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  marginTop: 4,
+                  borderRadius: 14,
+                  border: '1.5px solid rgba(108,92,231,0.2)',
+                  background: 'rgba(108,92,231,0.07)',
+                  color: '#6C5CE7',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Показать ещё {Math.min(PAGE_SIZE, filteredTasks.length - visibleCount)}
+              </button>
+            )}
 
             {/* Empty-filter message — appears after all cards have exited */}
             <AnimatePresence>

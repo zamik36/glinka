@@ -1,9 +1,9 @@
 [project]
 name = "glinka"
 version = "0.1.0"
-description = "Add your description here"
+description = "Homework Tracker — Telegram Mini App for tracking assignments and deadlines"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "aiogram>=3.25.0",
     "alembic>=1.18.4",
@@ -15,6 +15,7 @@ dependencies = [
     "sqlalchemy>=2.0.47",
     "aiofiles>=24.1.0",
     "python-multipart>=0.0.20",
+    "cachetools>=5.3",
     "slowapi>=0.1.9",
     "python-json-logger>=2.0",
     "prometheus-fastapi-instrumentator>=7.0",
@@ -29,4 +30,5 @@ dev = [
     "aiosqlite>=0.21",
     "ty>=0.0.1a7",
     "pip-audit>=2.7",
+    "types-cachetools>=5.3",
 ]

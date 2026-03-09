@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from app.domain.entities import Task, Reminder, Attachment
+from app.domain.entities import Task, Reminder, Attachment, ReminderStatus
 
 
 def test_task_defaults():
@@ -14,7 +14,7 @@ def test_task_defaults():
 def test_reminder_defaults():
     reminder = Reminder(task_id=1, remind_at=datetime(2026, 5, 30, 15, 0, tzinfo=timezone.utc))
     assert reminder.id is None
-    assert reminder.is_sent is False
+    assert reminder.status == ReminderStatus.PENDING
     assert reminder.task_id == 1
 
 

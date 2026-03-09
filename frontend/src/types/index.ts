@@ -10,6 +10,7 @@ export interface Task {
   text: string;
   deadline: string;
   is_completed: boolean;
+  reminder_status: 'pending' | 'sent' | null;
   attachments: Attachment[];
 }
 

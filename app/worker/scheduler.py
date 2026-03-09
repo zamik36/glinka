@@ -26,7 +26,7 @@ class ReminderScheduler:
 
     async def load_from_db(self, session: AsyncSession) -> int:
         stmt = select(ReminderModel.id, ReminderModel.remind_at).where(
-            ReminderModel.is_sent == False,  # noqa: E712
+            ReminderModel.status == "pending",
         )
         result = await session.execute(stmt)
         rows = result.all()

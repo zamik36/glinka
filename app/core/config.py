@@ -10,5 +10,6 @@ class Settings(BaseSettings):
     FILE_STORAGE_DIR: str = "./uploads"
     FALLBACK_SYNC_INTERVAL: int = 60
     WORKER_CONCURRENCY: int = 10
+    TASK_CACHE_TTL_SECONDS: int = 30
 
 settings = Settings()
