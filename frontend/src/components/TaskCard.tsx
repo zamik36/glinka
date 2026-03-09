@@ -106,7 +106,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
   task, index, onEdit, onDelete, onToggleComplete, onConfettiTrigger,
 }) => {
   const deadlineDate = useMemo(() => new Date(task.deadline), [task.deadline]);
-  const isOverdue    = !task.is_completed && isPast(deadlineDate);
+  const isOverdue    = !task.is_completed && isPast(deadlineDate) && task.reminder_status !== 'sent';
   const isInProgress = !task.is_completed && !isOverdue && task.reminder_status !== 'sent';
 
   const { relativeText, dateText } = useMemo(() => {

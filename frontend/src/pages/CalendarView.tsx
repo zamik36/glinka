@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useMemo, useCallback, memo, startTransition } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   startOfMonth,
@@ -17,7 +17,6 @@ import {
   FiChevronLeft, FiChevronRight,
   FiClock, FiCalendar, FiAlertTriangle, FiCheckCircle,
 } from 'react-icons/fi';
-import { api } from '../api/client';
 import type { Task } from '../types';
 
 // ─── Pure helpers (outside component — never recreated) ───────────────────────
@@ -113,19 +112,15 @@ const DayCell = memo<DayCellProps>(function DayCell({ day, isToday, isSelected, 
 
 // ─── CalendarView ─────────────────────────────────────────────────────────────
 
-export const CalendarView: React.FC = () => {
+interface CalendarViewProps {
+  tasks: Task[];
+  isLoading: boolean;
+}
+
+export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, isLoading: loading }) => {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
-  const [tasks, setTasks]               = useState<Task[]>([]);
-  const [loading, setLoading]           = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [direction, setDirection]       = useState(0); // -1 prev / +1 next — used in JSX (custom prop)
-
-  useEffect(() => {
-    api.getTasks()
-      .then(setTasks)
-      .catch(() => setTasks([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   // Stable "today" — computed once on mount
   const today    = useMemo(() => new Date(), []);
@@ -173,17 +168,21 @@ export const CalendarView: React.FC = () => {
     [selectedDateKey, tasksByDate],
   );
 
-  // Stable navigation callbacks
+  // Stable navigation callbacks — startTransition keeps UI responsive during re-render
   const goToPrev = useCallback(() => {
     setDirection(-1);
-    setCurrentMonth(m => subMonths(m, 1));
-    setSelectedDate(null);
+    startTransition(() => {
+      setCurrentMonth(m => subMonths(m, 1));
+      setSelectedDate(null);
+    });
   }, []);
 
   const goToNext = useCallback(() => {
     setDirection(1);
-    setCurrentMonth(m => addMonths(m, 1));
-    setSelectedDate(null);
+    startTransition(() => {
+      setCurrentMonth(m => addMonths(m, 1));
+      setSelectedDate(null);
+    });
   }, []);
 
   // Stable select handler — functional updater avoids capturing selectedDate
@@ -466,3 +465,5 @@ const navBtnStyle: React.CSSProperties = {
   cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
+
+export default CalendarView;

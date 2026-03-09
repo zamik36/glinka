@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useImperativeHandle, useRef, forwardRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, startTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import type { Task } from '../types';
@@ -8,10 +8,6 @@ import { isPast } from 'date-fns';
 import { useTelegram } from '../hooks/useTelegram';
 
 type Filter = 'active' | 'done' | 'overdue';
-
-export interface TaskListHandle {
-  reload: () => void;
-}
 
 const SkeletonCard: React.FC = () => (
   <div
@@ -45,34 +41,18 @@ const SkeletonCard: React.FC = () => (
 const PAGE_SIZE = 20;
 
 type TaskListProps = {
+  tasks: Task[];
+  isLoading: boolean;
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onEdit?: (task: Task) => void;
 };
 
-export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, ref) => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) {
   const [filter, setFilter] = useState<Filter>('active');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [confettiBursts, setConfettiBursts] = useState<{ id: number; x: number; y: number }[]>([]);
   const burstCounter = useRef(0);
   const { tg, hapticFeedback } = useTelegram();
-
-  const loadTasks = useCallback(async () => {
-    try {
-      const data = await api.getTasks();
-      setTasks(data);
-    } catch (error) {
-      console.error('Failed to load tasks:', error instanceof Error ? error.message : 'Unknown error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useImperativeHandle(ref, () => ({ reload: loadTasks }), [loadTasks]);
-
-  useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
 
   const handleDelete = useCallback((taskId: number) => {
     tg.showConfirm('Удалить задание?', async (confirmed: boolean) => {
@@ -86,7 +66,7 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
         tg.showAlert('Ошибка при удалении');
       }
     });
-  }, [tg, hapticFeedback]);
+  }, [tg, hapticFeedback, setTasks]);
 
   const handleConfettiTrigger = useCallback((x: number, y: number) => {
     const id = ++burstCounter.current;
@@ -103,17 +83,19 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
       console.error('Toggle failed:', error instanceof Error ? error.message : 'Unknown error');
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
     }
-  }, [hapticFeedback]);
+  }, [hapticFeedback, setTasks]);
 
-  // Reset pagination when filter changes
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [filter]);
+  const changeFilter = useCallback((f: Filter) => {
+    startTransition(() => setFilter(f));
+    setVisibleCount(PAGE_SIZE);
+  }, []);
 
   // Single pass through tasks — no repeated iterations on every render
   const { overdueCount, activeCount, doneCount, filteredTasks } = useMemo(() => {
     const overdue: Task[] = [], active: Task[] = [], done: Task[] = [];
     for (const t of tasks) {
       if (t.is_completed) done.push(t);
-      else if (isPast(new Date(t.deadline))) overdue.push(t);
+      else if (isPast(new Date(t.deadline)) && t.reminder_status !== 'sent') overdue.push(t);
       else active.push(t);
     }
     // Sort active: tasks with sent reminders appear before pending ones.
@@ -171,7 +153,7 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
             return (
               <motion.button
                 key={tab.key}
-                onClick={() => setFilter(tab.key)}
+                onClick={() => changeFilter(tab.key)}
                 animate={{ scale: isActive ? 1.03 : 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className="flex-1 text-center"
@@ -309,4 +291,4 @@ export const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ onEdit }, r
       ))}
     </div>
   );
-});
+}

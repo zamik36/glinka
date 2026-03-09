@@ -53,7 +53,9 @@ class TaskService:
         self.file_storage = file_storage
 
     async def create_task_with_reminder(
-        self, user_id: int, text: str, deadline: datetime, attachments: list[Attachment] | None = None
+        self, user_id: int, text: str, deadline: datetime,
+        attachments: list[Attachment] | None = None,
+        reminder_times: list[datetime] | None = None,
     ) -> Task:
         task = Task(user_id=user_id, text=text, deadline=deadline)
         created_task = await self.task_repo.create(task)
@@ -61,7 +63,8 @@ class TaskService:
         if created_task.id is None:
             raise RuntimeError("Task creation failed: id is None after flush")
 
-        for rt in _calculate_remind_times(deadline):
+        times = reminder_times if reminder_times else _calculate_remind_times(deadline)
+        for rt in times:
             reminder = Reminder(task_id=created_task.id, remind_at=rt)
             await self.reminder_repo.create(reminder)
 
@@ -73,7 +76,10 @@ class TaskService:
         self._invalidate_cache(user_id)
         return created_task
 
-    async def update_task(self, task_id: int, user_id: int, text: str, deadline: datetime) -> None:
+    async def update_task(
+        self, task_id: int, user_id: int, text: str, deadline: datetime,
+        reminder_times: list[datetime] | None = None,
+    ) -> None:
         task = await self.task_repo.get_by_id(task_id, for_update=True)
         if task is None:
             raise TaskNotFoundError(task_id)
@@ -82,8 +88,9 @@ class TaskService:
 
         await self.task_repo.update(task_id, text, deadline)
 
+        times = reminder_times if reminder_times else _calculate_remind_times(deadline)
         await self.reminder_repo.delete_by_task(task_id)
-        for rt in _calculate_remind_times(deadline):
+        for rt in times:
             await self.reminder_repo.create(Reminder(task_id=task_id, remind_at=rt))
 
         self._invalidate_cache(user_id)
