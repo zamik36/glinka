@@ -13,16 +13,3 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
-
-  - name: PostgreSQL
-    type: postgres
-    access: proxy
-    url: db:5432
-    user: ${GRAFANA_PG_USER}
-    jsonData:
-      database: ${GRAFANA_PG_DB}
-      sslmode: disable  # OK: db and grafana share a Docker network
-      postgresVersion: 1600
-    secureJsonData:
-      password: ${GRAFANA_PG_PASSWORD}
-    editable: false

@@ -31,4 +31,4 @@ async def get_task_service(
     task_repo = PostgresTaskRepository(session)
     reminder_repo = PostgresReminderRepository(session)
     attachment_repo = PostgresAttachmentRepository(session)
-    return TaskService(task_repo, reminder_repo, attachment_repo, file_storage, commit=session.commit)
+    return TaskService(task_repo, reminder_repo, attachment_repo, file_storage)

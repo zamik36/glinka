@@ -5,7 +5,6 @@ import { TaskList } from './pages/TaskList';
 import { AddTask } from './pages/AddTask';
 import { FiPlus, FiCalendar, FiArrowLeft } from 'react-icons/fi';
 import { api } from './api/client';
-import { ErrorBoundary } from './components/ErrorBoundary';
 import type { Task } from './types';
 
 const CalendarView = lazy(() => import('./pages/CalendarView'));
@@ -159,11 +158,9 @@ const App: React.FC = () => {
               exit={{ opacity: 0, x: 40 }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             >
-              <ErrorBoundary>
-                <Suspense fallback={<div className="h-64 animate-shimmer rounded-3xl" />}>
-                  <CalendarView tasks={tasks} isLoading={isLoading} />
-                </Suspense>
-              </ErrorBoundary>
+              <Suspense fallback={<div className="h-64 animate-shimmer rounded-3xl" />}>
+                <CalendarView tasks={tasks} isLoading={isLoading} />
+              </Suspense>
             </motion.div>
           ) : (
             <motion.div
