@@ -22,7 +22,7 @@ def validate_telegram_data(init_data: str) -> dict:
             raise ValueError("Invalid hash")
 
         auth_date = int(parsed_data.get('auth_date', 0))
-        if abs(time.time() - auth_date) > 300:
+        if time.time() - auth_date > settings.INIT_DATA_TTL_SECONDS:
             raise ValueError("initData expired")
 
         user_json = parsed_data.get('user')
