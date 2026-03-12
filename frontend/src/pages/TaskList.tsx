@@ -151,11 +151,9 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
           {statTabs.map(tab => {
             const isActive = filter === tab.key;
             return (
-              <motion.button
+              <button
                 key={tab.key}
                 onClick={() => changeFilter(tab.key)}
-                animate={{ scale: isActive ? 1.03 : 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className="flex-1 text-center"
                 style={{
                   background: isActive ? tab.activeBg : tab.bg,
@@ -164,14 +162,13 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
                   border: isActive ? `1.5px solid ${tab.color}44` : '1.5px solid transparent',
                   cursor: 'pointer',
                   opacity: isActive ? 1 : 0.65,
-                  transition: 'background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  transform: isActive ? 'scale(1.03)' : 'scale(1)',
+                  transition: 'background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
                 }}
               >
                 <p className="text-[22px] font-bold leading-none mb-0.5" style={{ color: tab.color }}>{tab.count}</p>
                 <p className="text-[11px] font-semibold" style={{ color: tab.color + 'BB' }}>{tab.label}</p>
-              </motion.button>
+              </button>
             );
           })}
         </motion.div>
@@ -218,7 +215,6 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
               {filteredTasks.slice(0, visibleCount).map((task, i) => (
                 <motion.div
                   key={task.id}
-                  layout
                   exit={{
                     height: 0,
                     marginBottom: 0,

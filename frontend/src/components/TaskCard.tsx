@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef, memo } from 'react';
+import React, { useMemo, useCallback, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow, isPast, format } from 'date-fns';
@@ -54,33 +54,6 @@ export const ConfettiBurst: React.FC<{ originX: number; originY: number }> = mem
   );
 });
 
-// ─── Ring burst — on task uncomplete ─────────────────────────────────────────
-
-const RingBurst: React.FC = memo(() => (
-  <>
-    <motion.span
-      initial={{ scale: 0.4, opacity: 1 }}
-      animate={{ scale: 2.8, opacity: 0 }}
-      transition={{ duration: 0.45, ease: 'easeOut' }}
-      style={{
-        position: 'absolute', left: 0, top: 0, width: 22, height: 22,
-        borderRadius: '50%', border: '2.5px solid #6C5CE7',
-        pointerEvents: 'none', zIndex: 50,
-      }}
-    />
-    <motion.span
-      initial={{ scale: 0.4, opacity: 0.6 }}
-      animate={{ scale: 2.0, opacity: 0 }}
-      transition={{ duration: 0.38, ease: 'easeOut', delay: 0.08 }}
-      style={{
-        position: 'absolute', left: 0, top: 0, width: 22, height: 22,
-        borderRadius: '50%', border: '1.5px solid #A29BFE',
-        pointerEvents: 'none', zIndex: 50,
-      }}
-    />
-  </>
-));
-
 // ─── PulsingDot ───────────────────────────────────────────────────────────────
 
 const PulsingDot: React.FC<{ color: string }> = memo(({ color }) => (
@@ -134,28 +107,18 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
 
   const attachmentCount = task.attachments?.length ?? 0;
 
-  const [showRing, setShowRing]       = useState(false);
-  const [checkBounce, setCheckBounce] = useState(false);
-  const checkboxRef                   = useRef<HTMLDivElement>(null);
+  const checkboxRef = useRef<HTMLDivElement>(null);
 
   const handleCheckboxClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const becomingComplete = !task.is_completed;
-
     if (becomingComplete) {
-      // Capture position and hand off to parent — parent owns the lifetime
       const rect = checkboxRef.current?.getBoundingClientRect();
       const ox = rect ? rect.left + rect.width / 2 : 0;
       const oy = rect ? rect.top + rect.height / 2 : 0;
       onConfettiTrigger?.(ox, oy);
-      setCheckBounce(true);
-      setTimeout(() => setCheckBounce(false), 600);
-      setTimeout(() => onToggleComplete?.(task.id, becomingComplete), 650);
-    } else {
-      setShowRing(true);
-      setTimeout(() => setShowRing(false), 550);
-      setTimeout(() => onToggleComplete?.(task.id, becomingComplete), 200);
     }
+    onToggleComplete?.(task.id, becomingComplete);
   }, [task.id, task.is_completed, onToggleComplete, onConfettiTrigger]);
 
   return (
@@ -204,15 +167,8 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
 
           {/* Checkbox */}
           <div ref={checkboxRef} style={{ position: 'relative', flexShrink: 0, marginTop: 2 }}>
-            {showRing && <RingBurst />}
-
-            <motion.button
-              animate={checkBounce ? { scale: [1, 1.4, 0.9, 1] } : { scale: 1 }}
-              transition={checkBounce
-                ? { duration: 0.4, times: [0, 0.4, 0.7, 1], type: 'spring', stiffness: 500, damping: 20 }
-                : { duration: 0.15 }
-              }
-              whileTap={{ scale: 0.78, transition: { duration: 0.1, type: 'spring', stiffness: 500 } }}
+            <button
+              className="btn-icon-tap"
               onClick={handleCheckboxClick}
               aria-label={task.is_completed ? 'Отметить активной' : 'Отметить выполненной'}
               style={{
@@ -226,7 +182,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 boxShadow: task.is_completed
                   ? '0 2px 8px rgba(16,185,129,0.35)'
                   : `0 1px 4px ${status.accent}22`,
-                transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease',
               }}
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -242,7 +198,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                   </motion.span>
                 )}
               </AnimatePresence>
-            </motion.button>
+            </button>
           </div>
 
           <p
@@ -308,8 +264,8 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
             )}
 
             {onEdit && (
-              <motion.button
-                whileTap={{ scale: 0.82, transition: { duration: 0.1 } }}
+              <button
+                className="btn-icon-tap"
                 onClick={(e) => { e.stopPropagation(); onEdit(task); }}
                 aria-label="Редактировать"
                 style={{
@@ -322,12 +278,12 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 }}
               >
                 <FiEdit2 size={13} />
-              </motion.button>
+              </button>
             )}
 
             {onDelete && (
-              <motion.button
-                whileTap={{ scale: 0.82, transition: { duration: 0.1 } }}
+              <button
+                className="btn-icon-tap"
                 onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
                 aria-label="Удалить"
                 style={{
@@ -340,7 +296,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 }}
               >
                 <FiTrash2 size={13} />
-              </motion.button>
+              </button>
             )}
           </div>
         </div>
