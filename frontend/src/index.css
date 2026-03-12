@@ -127,8 +127,7 @@ body {
 }
 
 .animate-blob {
-  animation: blob-move 8s ease-in-out infinite;
-  will-change: transform;
+  animation: blob-move 8s ease-in-out 1 forwards;
 }
 
 .animate-spin-slow {
@@ -291,4 +290,12 @@ body {
 
 .btn-gradient:disabled {
   opacity: 0.5;
+}
+
+/* Tap effect for icon buttons (replaces framer-motion whileTap) */
+.btn-icon-tap {
+  transition: transform 0.1s ease;
+}
+.btn-icon-tap:active {
+  transform: scale(0.82);
 }

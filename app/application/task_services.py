@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import timedelta, datetime, timezone
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from cachetools import TTLCache
@@ -46,11 +47,13 @@ class TaskService:
         reminder_repo: ReminderRepository,
         attachment_repo: AttachmentRepository,
         file_storage: FileStorageService | None = None,
+        commit: Callable[[], Awaitable[None]] | None = None,
     ):
         self.task_repo = task_repo
         self.reminder_repo = reminder_repo
         self.attachment_repo = attachment_repo
         self.file_storage = file_storage
+        self._commit = commit
 
     async def create_task_with_reminder(
         self, user_id: int, text: str, deadline: datetime,
@@ -73,7 +76,7 @@ class TaskService:
                 att.task_id = created_task.id
                 await self.attachment_repo.create(att)
 
-        self._invalidate_cache(user_id)
+        await self._commit_and_invalidate(user_id)
         return created_task
 
     async def update_task(
@@ -93,7 +96,7 @@ class TaskService:
         for rt in times:
             await self.reminder_repo.create(Reminder(task_id=task_id, remind_at=rt))
 
-        self._invalidate_cache(user_id)
+        await self._commit_and_invalidate(user_id)
 
     async def delete_task(self, task_id: int, user_id: int) -> None:
         task = await self.task_repo.get_by_id(task_id, for_update=True)
@@ -114,7 +117,7 @@ class TaskService:
 
         await self.reminder_repo.delete_by_task(task_id)
         await self.task_repo.delete(task_id)
-        self._invalidate_cache(user_id)
+        await self._commit_and_invalidate(user_id)
 
     async def get_user_tasks(self, user_id: int, limit: int = DEFAULT_LIMIT, offset: int = 0) -> list[dict[str, Any]]:
         if limit == DEFAULT_LIMIT and offset == 0 and user_id in _task_cache:
@@ -124,7 +127,9 @@ class TaskService:
             _task_cache[user_id] = list(result)  # store a copy to prevent external mutation
         return result
 
-    def _invalidate_cache(self, user_id: int) -> None:
+    async def _commit_and_invalidate(self, user_id: int) -> None:
+        if self._commit:
+            await self._commit()
         _task_cache.pop(user_id, None)
 
     async def toggle_complete(self, task_id: int, user_id: int, is_completed: bool) -> None:
@@ -134,4 +139,4 @@ class TaskService:
         if task["user_id"] != user_id:
             raise ForbiddenError(task_id)
         await self.task_repo.toggle_complete(task_id, is_completed)
-        self._invalidate_cache(user_id)
+        await self._commit_and_invalidate(user_id)

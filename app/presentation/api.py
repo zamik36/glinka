@@ -7,9 +7,6 @@ from app.presentation.dependencies import get_current_user, get_task_service, ge
 from app.application.task_services import TaskService
 from app.infrastructure.file_storage import FileStorageService
 from app.domain.entities import Attachment
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.infrastructure.database import get_db_session
-
 from app.core.utils import get_real_ip
 limiter = Limiter(key_func=get_real_ip)
 
@@ -56,7 +53,6 @@ async def create_task(
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
     file_storage: FileStorageService = Depends(get_file_storage),
-    session: AsyncSession = Depends(get_db_session),
 ):
     try:
         deadline_dt = datetime.fromisoformat(deadline)
@@ -86,7 +82,6 @@ async def create_task(
 
     reminder_times = _parse_reminder_times(reminder_at) if reminder_at else None
     task = await service.create_task_with_reminder(user_id, text, deadline_dt, attachments or None, reminder_times)
-    await session.commit()
     return {"status": "success", "task_id": task.id}
 
 @router.put("/{task_id}")
@@ -97,7 +92,6 @@ async def update_task(
     reminder_at: list[str] = Form(default=[]),
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
-    session: AsyncSession = Depends(get_db_session),
 ):
     try:
         deadline_dt = datetime.fromisoformat(deadline)
@@ -112,7 +106,6 @@ async def update_task(
 
     reminder_times = _parse_reminder_times(reminder_at) if reminder_at else None
     await service.update_task(task_id, user_id, text, deadline_dt, reminder_times)
-    await session.commit()
     return {"status": "success"}
 
 
@@ -121,10 +114,8 @@ async def delete_task(
     task_id: int,
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
-    session: AsyncSession = Depends(get_db_session),
 ):
     await service.delete_task(task_id, user_id)
-    await session.commit()
     return {"status": "success"}
 
 
@@ -138,10 +129,8 @@ async def toggle_task_complete(
     payload: CompletePayload,
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
-    session: AsyncSession = Depends(get_db_session),
 ):
     await service.toggle_complete(task_id, user_id, payload.is_completed)
-    await session.commit()
     return {"status": "success"}
 
 
