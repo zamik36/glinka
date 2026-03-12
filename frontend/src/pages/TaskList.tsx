@@ -215,17 +215,15 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
               {filteredTasks.slice(0, visibleCount).map((task, i) => (
                 <motion.div
                   key={task.id}
+                  layout
+                  initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{
-                    height: 0,
-                    marginBottom: 0,
                     opacity: 0,
-                    transition: {
-                      height:       { duration: 0.45, ease: 'easeInOut' },
-                      marginBottom: { duration: 0.45, ease: 'easeInOut' },
-                      opacity:      { duration: 0.25, ease: 'easeIn' },
-                    },
+                    scale: 0.95,
+                    transition: { duration: 0.25, ease: 'easeOut' },
                   }}
-                  style={{ overflow: 'hidden' }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <TaskCard
                     task={task}

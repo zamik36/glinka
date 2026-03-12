@@ -123,9 +123,8 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
 
   return (
     <article
-      className="mb-3 relative animate-card-in"
+      className="mb-3 relative"
       style={{
-        animationDelay: `${index * 0.06}s`,
         borderRadius: 20,
         background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.87) 100%)',
         border: '1px solid rgba(255,255,255,0.65)',
