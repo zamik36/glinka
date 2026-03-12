@@ -151,9 +151,11 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
           {statTabs.map(tab => {
             const isActive = filter === tab.key;
             return (
-              <button
+              <motion.button
                 key={tab.key}
                 onClick={() => changeFilter(tab.key)}
+                animate={{ scale: isActive ? 1.03 : 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className="flex-1 text-center"
                 style={{
                   background: isActive ? tab.activeBg : tab.bg,
@@ -162,13 +164,14 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
                   border: isActive ? `1.5px solid ${tab.color}44` : '1.5px solid transparent',
                   cursor: 'pointer',
                   opacity: isActive ? 1 : 0.65,
-                  transform: isActive ? 'scale(1.03)' : 'scale(1)',
-                  transition: 'background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
+                  transition: 'background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                 }}
               >
                 <p className="text-[22px] font-bold leading-none mb-0.5" style={{ color: tab.color }}>{tab.count}</p>
                 <p className="text-[11px] font-semibold" style={{ color: tab.color + 'BB' }}>{tab.label}</p>
-              </button>
+              </motion.button>
             );
           })}
         </motion.div>
@@ -216,14 +219,17 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
                 <motion.div
                   key={task.id}
                   layout
-                  initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{
+                    height: 0,
+                    marginBottom: 0,
                     opacity: 0,
-                    scale: 0.95,
-                    transition: { duration: 0.25, ease: 'easeOut' },
+                    transition: {
+                      height:       { duration: 0.45, ease: 'easeInOut' },
+                      marginBottom: { duration: 0.45, ease: 'easeInOut' },
+                      opacity:      { duration: 0.25, ease: 'easeIn' },
+                    },
                   }}
-                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ overflow: 'hidden' }}
                 >
                   <TaskCard
                     task={task}
