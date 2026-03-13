@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef, memo } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow, isPast, format } from 'date-fns';
@@ -137,26 +137,50 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
   const [showRing, setShowRing]       = useState(false);
   const [checkBounce, setCheckBounce] = useState(false);
   const checkboxRef                   = useRef<HTMLDivElement>(null);
+  const isTogglingRef                 = useRef(false);
+  const pendingTimers                 = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const onToggleCompleteRef           = useRef(onToggleComplete);
+  onToggleCompleteRef.current = onToggleComplete;
+
+  useEffect(() => {
+    const timers = pendingTimers.current;
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, []);
 
   const handleCheckboxClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isTogglingRef.current) return;
+    isTogglingRef.current = true;
     const becomingComplete = !task.is_completed;
 
+    const schedule = (fn: () => void, ms: number) => {
+      const id = setTimeout(fn, ms);
+      pendingTimers.current.push(id);
+      return id;
+    };
+
     if (becomingComplete) {
-      // Capture position and hand off to parent — parent owns the lifetime
       const rect = checkboxRef.current?.getBoundingClientRect();
       const ox = rect ? rect.left + rect.width / 2 : 0;
       const oy = rect ? rect.top + rect.height / 2 : 0;
       onConfettiTrigger?.(ox, oy);
       setCheckBounce(true);
-      setTimeout(() => setCheckBounce(false), 600);
-      setTimeout(() => onToggleComplete?.(task.id, becomingComplete), 650);
+      schedule(() => setCheckBounce(false), 600);
+      schedule(() => {
+        onToggleCompleteRef.current?.(task.id, becomingComplete);
+        isTogglingRef.current = false;
+      }, 650);
     } else {
       setShowRing(true);
-      setTimeout(() => setShowRing(false), 550);
-      setTimeout(() => onToggleComplete?.(task.id, becomingComplete), 200);
+      schedule(() => setShowRing(false), 550);
+      schedule(() => {
+        onToggleCompleteRef.current?.(task.id, becomingComplete);
+        isTogglingRef.current = false;
+      }, 200);
     }
-  }, [task.id, task.is_completed, onToggleComplete, onConfettiTrigger]);
+  }, [task.id, task.is_completed, onConfettiTrigger]);
 
   return (
     <article

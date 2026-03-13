@@ -11,5 +11,6 @@ class Settings(BaseSettings):
     FALLBACK_SYNC_INTERVAL: int = 60
     WORKER_CONCURRENCY: int = 10
     TASK_CACHE_TTL_SECONDS: int = 30
+    INIT_DATA_TTL: int = 86400
 
 settings = Settings()
