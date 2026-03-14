@@ -2,9 +2,9 @@ name: CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -70,9 +70,32 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            docker network create web 2>/dev/null || true
             cd ${{ secrets.VPS_PROJECT_PATH }}
             git pull origin main
             docker compose build
             docker compose run --rm migrate
             docker compose up -d
             curl -f --retry 10 --retry-delay 3 --retry-connrefused https://glinka-ht.ru/ || exit 1
+
+  deploy-stage:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    environment: staging
+
+    steps:
+      - name: Deploy to VPS (staging)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            docker network create web 2>/dev/null || true
+            cd ${{ secrets.VPS_STAGE_PATH }}
+            git pull origin dev
+            docker compose -f docker-compose.yml -f docker-compose.stage.yml build
+            docker compose -f docker-compose.yml -f docker-compose.stage.yml run --rm migrate
+            docker compose -f docker-compose.yml -f docker-compose.stage.yml up -d
+            curl -f --retry 10 --retry-delay 3 --retry-connrefused https://stage.glinka-ht.ru/ || exit 1
