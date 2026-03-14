@@ -103,6 +103,9 @@ services:
     depends_on:
       - api
       - frontend
+    networks:
+      - default
+      - web
     deploy:
       resources:
         limits:
@@ -170,6 +173,10 @@ services:
         limits:
           cpus: "0.5"
           memory: 256M
+
+networks:
+  web:
+    external: true
 
 volumes:
   pgdata:

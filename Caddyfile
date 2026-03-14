@@ -31,3 +31,30 @@ glinka-ht.ru {
 
     encode zstd gzip
 }
+
+stage.glinka-ht.ru {
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        Content-Security-Policy "frame-ancestors 'self' https://web.telegram.org"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    handle /api/* {
+        reverse_proxy stage-api:8000
+    }
+
+    handle /health {
+        basicauth {
+            admin {env.CADDY_ADMIN_HASH}
+        }
+        reverse_proxy stage-api:8000
+    }
+
+    handle {
+        reverse_proxy stage-frontend:80
+    }
+
+    encode zstd gzip
+}
