@@ -1,0 +1,48 @@
+# Stage environment override.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.stage.yml up -d
+#
+# Disables caddy (prod Caddy handles stage.glinka-ht.ru),
+# disables monitoring stack, uses separate volumes.
+
+services:
+  db:
+    volumes:
+      - stage_pgdata:/var/lib/postgresql/data
+
+  api:
+    container_name: stage-api
+    volumes:
+      - stage_uploads:/app/uploads
+    networks:
+      - default
+      - web
+
+  worker:
+    volumes:
+      - stage_uploads:/app/uploads
+
+  frontend:
+    container_name: stage-frontend
+    networks:
+      - default
+      - web
+
+  # Disable services not needed in stage
+  caddy:
+    profiles: ["disabled"]
+  prometheus:
+    profiles: ["disabled"]
+  loki:
+    profiles: ["disabled"]
+  promtail:
+    profiles: ["disabled"]
+  grafana:
+    profiles: ["disabled"]
+
+networks:
+  web:
+    external: true
+
+volumes:
+  stage_pgdata:
+  stage_uploads:
