@@ -15,6 +15,9 @@ let tasks: Task[] = [
     is_completed: false,
     reminder_status: 'pending',
     attachments: [],
+    reminders: [
+      { id: 1, remind_at: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(), status: 'pending' as const },
+    ],
   },
   {
     id: 2,
@@ -23,6 +26,10 @@ let tasks: Task[] = [
     is_completed: false,
     reminder_status: 'pending',
     attachments: [{ id: 1, filename: 'lab.pdf', mime_type: 'application/pdf', size: 204800 }],
+    reminders: [
+      { id: 2, remind_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(), status: 'pending' as const },
+      { id: 3, remind_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), status: 'sent' as const },
+    ],
   },
   {
     id: 3,
@@ -31,6 +38,7 @@ let tasks: Task[] = [
     is_completed: false,
     reminder_status: 'pending',
     attachments: [],
+    reminders: [],
   },
   {
     id: 4,
@@ -39,6 +47,9 @@ let tasks: Task[] = [
     is_completed: true,
     reminder_status: null,
     attachments: [],
+    reminders: [
+      { id: 4, remind_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), status: 'sent' as const },
+    ],
   },
   {
     id: 5,
@@ -47,6 +58,10 @@ let tasks: Task[] = [
     is_completed: false,
     reminder_status: 'pending',
     attachments: [],
+    reminders: [
+      { id: 5, remind_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), status: 'pending' as const },
+      { id: 6, remind_at: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), status: 'pending' as const },
+    ],
   },
 ];
 
@@ -60,13 +75,15 @@ export const mockApi = {
 
   createTask: async (data: { text: string; deadline: string; reminder_at?: string[] }): Promise<{ status: string; task_id: number }> => {
     await delay(500);
+    const taskId = nextId++;
     const task: Task = {
-      id: nextId++,
+      id: taskId,
       text: data.text,
       deadline: data.deadline,
       is_completed: false,
       reminder_status: 'pending',
       attachments: [],
+      reminders: (data.reminder_at ?? []).map((r, i) => ({ id: taskId * 100 + i, remind_at: r, status: 'pending' as const })),
     };
     tasks = [...tasks, task];
     return { status: 'ok', task_id: task.id };

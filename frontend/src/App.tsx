@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from './hooks/useTelegram';
 import { TaskList } from './pages/TaskList';
 import { AddTask } from './pages/AddTask';
+import { TaskDetail } from './components/TaskDetail';
 import { FiPlus, FiCalendar, FiArrowLeft } from 'react-icons/fi';
 import { api } from './api/client';
 import type { Task } from './types';
@@ -14,6 +15,7 @@ const App: React.FC = () => {
   const [showAddTask, setShowAddTask] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -41,8 +43,13 @@ const App: React.FC = () => {
   }, [loadTasks]);
 
   const handleEdit = useCallback((task: Task) => {
+    setViewingTask(null);
     setEditingTask(task);
     setShowAddTask(true);
+  }, []);
+
+  const handleView = useCallback((task: Task) => {
+    setViewingTask(task);
   }, []);
 
   const handleSheetClose = useCallback(() => {
@@ -170,7 +177,7 @@ const App: React.FC = () => {
               exit={{ opacity: 0, x: -40 }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             >
-              <TaskList tasks={tasks} isLoading={isLoading} setTasks={setTasks} onEdit={handleEdit} />
+              <TaskList tasks={tasks} isLoading={isLoading} setTasks={setTasks} onEdit={handleEdit} onView={handleView} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -198,7 +205,7 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Bottom Sheet */}
+      {/* Bottom Sheet — Add/Edit Task */}
       <AnimatePresence>
         {showAddTask && (
           <>
@@ -226,7 +233,6 @@ const App: React.FC = () => {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 350 }}
             >
-              {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-1">
                 <div className="w-10 h-1.5 rounded-full" style={{ background: 'var(--accent-soft)' }} />
               </div>
@@ -235,6 +241,48 @@ const App: React.FC = () => {
                 onSuccess={handleTaskCreated}
                 onClose={handleSheetClose}
                 editTask={editingTask}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Sheet — Task Detail */}
+      <AnimatePresence>
+        {viewingTask && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40"
+              style={{ background: 'rgba(15, 12, 35, 0.55)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={() => setViewingTask(null)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 z-50 max-h-[92vh] overflow-y-auto"
+              style={{
+                background: 'var(--surface-elevated)',
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                boxShadow: '0 -8px 40px rgba(108, 92, 231, 0.15)',
+                overscrollBehavior: 'contain',
+                WebkitOverflowScrolling: 'touch',
+              }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 350 }}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1.5 rounded-full" style={{ background: 'var(--accent-soft)' }} />
+              </div>
+              <TaskDetail
+                key={viewingTask.id}
+                task={viewingTask}
+                onClose={() => setViewingTask(null)}
+                onEdit={handleEdit}
               />
             </motion.div>
           </>

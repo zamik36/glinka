@@ -60,6 +60,14 @@ class PostgresTaskRepository(TaskRepository):
                     }
                     for a in row.attachments
                 ],
+                "reminders": [
+                    {
+                        "id": r.id,
+                        "remind_at": r.remind_at,
+                        "status": r.status,
+                    }
+                    for r in row.reminders
+                ],
             }
             tasks.append(task_dict)
         return tasks

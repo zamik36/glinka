@@ -21,6 +21,11 @@ class AttachmentResponse(BaseModel):
     mime_type: str
     size: int
 
+class ReminderResponse(BaseModel):
+    id: int
+    remind_at: datetime
+    status: str
+
 class TaskResponse(BaseModel):
     id: int
     text: str
@@ -29,6 +34,7 @@ class TaskResponse(BaseModel):
     created_at: datetime
     reminder_status: Optional[Literal["pending", "sent"]] = None
     attachments: list[AttachmentResponse] = []
+    reminders: list[ReminderResponse] = []
 
 def _parse_reminder_times(raw: list[str]) -> list[datetime]:
     now = datetime.now(timezone.utc)

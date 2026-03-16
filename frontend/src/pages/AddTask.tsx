@@ -478,7 +478,9 @@ export const AddTask: React.FC<Props> = ({ onSuccess, onClose, editTask }) => {
   const isEditMode = !!editTask;
   const [text, setText]           = useState(editTask?.text ?? '');
   const [deadline, setDeadline]   = useState(editTask ? toLocalDatetime(editTask.deadline) : '');
-  const [reminders, setReminders] = useState<string[]>([]);
+  const [reminders, setReminders] = useState<string[]>(
+    editTask?.reminders?.map(r => r.remind_at) ?? []
+  );
   const [files, setFiles]         = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragOver, setIsDragOver]     = useState(false);

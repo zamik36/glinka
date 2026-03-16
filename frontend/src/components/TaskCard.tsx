@@ -98,12 +98,13 @@ type TaskCardProps = {
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: number) => void;
   onToggleComplete?: (taskId: number, value: boolean) => void;
+  onView?: (task: Task) => void;
   /** Called with fixed screen coords of the checkbox center right when user clicks */
   onConfettiTrigger?: (x: number, y: number) => void;
 };
 
 export const TaskCard: React.FC<TaskCardProps> = memo(({
-  task, index, onEdit, onDelete, onToggleComplete, onConfettiTrigger,
+  task, index, onEdit, onDelete, onToggleComplete, onConfettiTrigger, onView,
 }) => {
   const deadlineDate = useMemo(() => new Date(task.deadline), [task.deadline]);
   const isOverdue    = !task.is_completed && isPast(deadlineDate) && task.reminder_status !== 'sent';
@@ -133,6 +134,17 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
   }, [task.is_completed, task.reminder_status, isOverdue]);
 
   const attachmentCount = task.attachments?.length ?? 0;
+
+  const nextReminderText = useMemo(() => {
+    if (task.is_completed || !task.reminders?.length) return null;
+    const now = Date.now();
+    const pending = task.reminders
+      .filter(r => r.status === 'pending' && new Date(r.remind_at).getTime() > now)
+      .sort((a, b) => new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime());
+    if (!pending.length) return null;
+    try { return format(new Date(pending[0].remind_at), 'd MMM, HH:mm', { locale: ru }); }
+    catch { return null; }
+  }, [task.is_completed, task.reminders]);
 
   const [showRing, setShowRing]       = useState(false);
   const [checkBounce, setCheckBounce] = useState(false);
@@ -168,24 +180,21 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
       onConfettiTrigger?.(ox, oy);
       setCheckBounce(true);
       schedule(() => setCheckBounce(false), 600);
-      schedule(() => {
-        onToggleCompleteRef.current?.(task.id, becomingComplete);
-        isTogglingRef.current = false;
-      }, 650);
     } else {
       setShowRing(true);
       schedule(() => setShowRing(false), 550);
-      schedule(() => {
-        onToggleCompleteRef.current?.(task.id, becomingComplete);
-        isTogglingRef.current = false;
-      }, 200);
     }
+
+    onToggleCompleteRef.current?.(task.id, becomingComplete);
+    schedule(() => { isTogglingRef.current = false; }, 700);
   }, [task.id, task.is_completed, onConfettiTrigger]);
 
   return (
     <article
       className="mb-3 relative animate-card-in"
+      onClick={() => onView?.(task)}
       style={{
+        cursor: onView ? 'pointer' : undefined,
         animationDelay: `${index * 0.06}s`,
         borderRadius: 20,
         background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.87) 100%)',
@@ -320,6 +329,12 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
               }}>
                 {relativeText}
               </span>
+            )}
+            {nextReminderText && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#A29BFE', fontSize: 11, fontWeight: 500 }}>
+                <FiBell size={10} />
+                <span>{nextReminderText}</span>
+              </div>
             )}
           </div>
 

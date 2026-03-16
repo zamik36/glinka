@@ -45,9 +45,10 @@ type TaskListProps = {
   isLoading: boolean;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onEdit?: (task: Task) => void;
+  onView?: (task: Task) => void;
 };
 
-export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) {
+export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskListProps) {
   const [filter, setFilter] = useState<Filter>('active');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [confettiBursts, setConfettiBursts] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -75,13 +76,12 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
   }, []);
 
   const handleToggleComplete = useCallback(async (taskId: number, value: boolean) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     hapticFeedback();
     try {
       await api.toggleComplete(taskId, value);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     } catch (error) {
       console.error('Toggle failed:', error instanceof Error ? error.message : 'Unknown error');
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
     }
   }, [hapticFeedback, setTasks]);
 
@@ -228,6 +228,7 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
                     onDelete={handleDelete}
                     onToggleComplete={handleToggleComplete}
                     onConfettiTrigger={handleConfettiTrigger}
+                    onView={onView}
                   />
                 </motion.div>
               ))}
