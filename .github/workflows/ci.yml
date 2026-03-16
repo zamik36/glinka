@@ -72,6 +72,7 @@ jobs:
           script: |
             docker network create web 2>/dev/null || true
             cd ${{ secrets.VPS_PROJECT_PATH }}
+            git config --global --add safe.directory ${{ secrets.VPS_PROJECT_PATH }}
             git pull origin main
             docker compose build
             docker compose run --rm migrate
@@ -94,6 +95,7 @@ jobs:
           script: |
             docker network create web 2>/dev/null || true
             cd ${{ secrets.VPS_STAGE_PATH }}
+            git config --global --add safe.directory ${{ secrets.VPS_STAGE_PATH }}
             git pull origin dev
             docker compose -f docker-compose.yml -f docker-compose.stage.yml build
             docker compose -f docker-compose.yml -f docker-compose.stage.yml run --rm migrate
