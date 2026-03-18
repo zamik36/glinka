@@ -180,13 +180,18 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
       onConfettiTrigger?.(ox, oy);
       setCheckBounce(true);
       schedule(() => setCheckBounce(false), 600);
+      schedule(() => {
+        onToggleCompleteRef.current?.(task.id, becomingComplete);
+        isTogglingRef.current = false;
+      }, 650);
     } else {
       setShowRing(true);
       schedule(() => setShowRing(false), 550);
+      schedule(() => {
+        onToggleCompleteRef.current?.(task.id, becomingComplete);
+        isTogglingRef.current = false;
+      }, 200);
     }
-
-    onToggleCompleteRef.current?.(task.id, becomingComplete);
-    schedule(() => { isTogglingRef.current = false; }, 700);
   }, [task.id, task.is_completed, onConfettiTrigger]);
 
   return (

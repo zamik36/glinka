@@ -77,11 +77,12 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskLis
 
   const handleToggleComplete = useCallback(async (taskId: number, value: boolean) => {
     hapticFeedback();
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     try {
       await api.toggleComplete(taskId, value);
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     } catch (error) {
       console.error('Toggle failed:', error instanceof Error ? error.message : 'Unknown error');
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
     }
   }, [hapticFeedback, setTasks]);
 
