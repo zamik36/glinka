@@ -97,7 +97,7 @@ type TaskCardProps = {
   index: number;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: number) => void;
-  onToggleComplete?: (taskId: number, value: boolean) => void;
+  onToggleComplete?: (taskId: number, value: boolean) => Promise<void>;
   onView?: (task: Task) => void;
   /** Called with fixed screen coords of the checkbox center right when user clicks */
   onConfettiTrigger?: (x: number, y: number) => void;
@@ -167,40 +167,36 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
     isTogglingRef.current = true;
     const becomingComplete = !task.is_completed;
 
-    const schedule = (fn: () => void, ms: number) => {
-      const id = setTimeout(fn, ms);
-      pendingTimers.current.push(id);
-      return id;
-    };
-
+    // Visual effects start immediately
     if (becomingComplete) {
       const rect = checkboxRef.current?.getBoundingClientRect();
       const ox = rect ? rect.left + rect.width / 2 : 0;
       const oy = rect ? rect.top + rect.height / 2 : 0;
       onConfettiTrigger?.(ox, oy);
       setCheckBounce(true);
-      schedule(() => setCheckBounce(false), 600);
-      schedule(() => {
-        onToggleCompleteRef.current?.(task.id, becomingComplete);
-        isTogglingRef.current = false;
-      }, 650);
+      const id = setTimeout(() => setCheckBounce(false), 600);
+      pendingTimers.current.push(id);
     } else {
       setShowRing(true);
-      schedule(() => setShowRing(false), 550);
-      schedule(() => {
-        onToggleCompleteRef.current?.(task.id, becomingComplete);
-        isTogglingRef.current = false;
-      }, 200);
+      const id = setTimeout(() => setShowRing(false), 550);
+      pendingTimers.current.push(id);
+    }
+
+    // Toggle fires immediately — it coordinates API + animation delay via Promise.all
+    const result = onToggleCompleteRef.current?.(task.id, becomingComplete);
+    if (result && typeof result.then === 'function') {
+      result.finally(() => { isTogglingRef.current = false; });
+    } else {
+      isTogglingRef.current = false;
     }
   }, [task.id, task.is_completed, onConfettiTrigger]);
 
   return (
     <article
-      className="mb-3 relative animate-card-in"
+      className="mb-3 relative"
       onClick={() => onView?.(task)}
       style={{
         cursor: onView ? 'pointer' : undefined,
-        animationDelay: `${index * 0.06}s`,
         borderRadius: 20,
         background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.87) 100%)',
         border: '1px solid rgba(255,255,255,0.65)',

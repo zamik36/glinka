@@ -39,6 +39,8 @@ const SkeletonCard: React.FC = () => (
 );
 
 const PAGE_SIZE = 20;
+const COMPLETE_ANIM_MS = 650;
+const UNCOMPLETE_ANIM_MS = 200;
 
 type TaskListProps = {
   tasks: Task[];
@@ -77,14 +79,15 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskLis
 
   const handleToggleComplete = useCallback(async (taskId: number, value: boolean) => {
     hapticFeedback();
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
+    const animDelay = new Promise<void>(r => setTimeout(r, value ? COMPLETE_ANIM_MS : UNCOMPLETE_ANIM_MS));
     try {
-      await api.toggleComplete(taskId, value);
+      await Promise.all([api.toggleComplete(taskId, value), animDelay]);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     } catch (error) {
       console.error('Toggle failed:', error instanceof Error ? error.message : 'Unknown error');
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
+      tg.HapticFeedback?.notificationOccurred('error');
     }
-  }, [hapticFeedback, setTasks]);
+  }, [hapticFeedback, tg, setTasks]);
 
   const changeFilter = useCallback((f: Filter) => {
     startTransition(() => setFilter(f));
@@ -216,10 +219,15 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskLis
               {filteredTasks.slice(0, visibleCount).map((task, i) => (
                 <motion.div
                   key={task.id}
-                  exit={{
-                    opacity: 0,
-                    scale: 0.95,
-                    transition: { duration: 0.25, ease: 'easeIn' },
+                  layout
+                  initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{
+                    duration: 0.38,
+                    delay: Math.min(i, 11) * 0.06,
+                    ease: [0.22, 1, 0.36, 1],
+                    layout: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
                   }}
                 >
                   <TaskCard
