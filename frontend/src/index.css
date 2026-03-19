@@ -226,10 +226,11 @@ body {
 .bg-blob {
   position: fixed;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.28;
+  filter: blur(50px);
+  opacity: 0.32;
   pointer-events: none;
   z-index: 0;
+  contain: strict;
 }
 
 /* Respect system reduced-motion preference */
@@ -291,4 +292,24 @@ body {
 
 .btn-gradient:disabled {
   opacity: 0.5;
+}
+
+/* Lightweight tap feedback — replaces Framer Motion whileTap for simple buttons */
+.btn-tap {
+  transition: transform 0.1s ease;
+}
+.btn-tap:active {
+  transform: scale(0.82);
+}
+
+.btn-tap-sm {
+  transition: transform 0.1s ease;
+}
+.btn-tap-sm:active {
+  transform: scale(0.84);
+}
+
+/* CSS containment for task cards — isolates layout/paint per card */
+.task-card {
+  contain: content;
 }

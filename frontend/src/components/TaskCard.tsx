@@ -193,7 +193,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
 
   return (
     <article
-      className="mb-3 relative"
+      className="task-card mb-3 relative"
       onClick={() => onView?.(task)}
       style={{
         cursor: onView ? 'pointer' : undefined,
@@ -348,8 +348,8 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
             )}
 
             {onEdit && (
-              <motion.button
-                whileTap={{ scale: 0.82, transition: { duration: 0.1 } }}
+              <button
+                className="btn-tap"
                 onClick={(e) => { e.stopPropagation(); onEdit(task); }}
                 aria-label="Редактировать"
                 style={{
@@ -362,12 +362,12 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 }}
               >
                 <FiEdit2 size={13} />
-              </motion.button>
+              </button>
             )}
 
             {onDelete && (
-              <motion.button
-                whileTap={{ scale: 0.82, transition: { duration: 0.1 } }}
+              <button
+                className="btn-tap"
                 onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
                 aria-label="Удалить"
                 style={{
@@ -380,7 +380,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 }}
               >
                 <FiTrash2 size={13} />
-              </motion.button>
+              </button>
             )}
           </div>
         </div>

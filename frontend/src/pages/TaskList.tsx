@@ -50,7 +50,7 @@ type TaskListProps = {
   onView?: (task: Task) => void;
 };
 
-export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskListProps) {
+export const TaskList = React.memo(function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskListProps) {
   const [filter, setFilter] = useState<Filter>('active');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [confettiBursts, setConfettiBursts] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -215,24 +215,21 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskLis
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <AnimatePresence>
               {filteredTasks.slice(0, visibleCount).map((task, i) => (
                 <motion.div
                   key={task.id}
-                  layout
                   initial={{ opacity: 0, y: 16, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{
                     duration: 0.38,
-                    delay: Math.min(i, 11) * 0.06,
+                    delay: Math.min(i, 5) * 0.04,
                     ease: [0.22, 1, 0.36, 1],
-                    layout: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
                   }}
                 >
                   <TaskCard
                     task={task}
-                    index={Math.min(i, 11)}
+                    index={Math.min(i, 5)}
                     onEdit={onEdit}
                     onDelete={handleDelete}
                     onToggleComplete={handleToggleComplete}
@@ -241,7 +238,6 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskLis
                   />
                 </motion.div>
               ))}
-            </AnimatePresence>
 
             {filteredTasks.length > visibleCount && (
               <button
@@ -291,4 +287,4 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskLis
       ))}
     </div>
   );
-}
+});

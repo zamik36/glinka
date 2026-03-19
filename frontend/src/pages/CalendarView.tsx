@@ -58,8 +58,8 @@ const DayCell = memo<DayCellProps>(function DayCell({ day, isToday, isSelected, 
   const isWeekend = getMondayIndex(day) >= 5;
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.84 }}
+    <button
+      className="btn-tap-sm"
       onClick={() => onSelect(day)}
       style={{
         height: 44,
@@ -105,7 +105,7 @@ const DayCell = memo<DayCellProps>(function DayCell({ day, isToday, isSelected, 
           ))}
         </div>
       )}
-    </motion.button>
+    </button>
   );
 });
 
@@ -206,9 +206,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, isLoading: lo
         }}>
           {/* Month navigator */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <motion.button whileTap={{ scale: 0.82 }} onClick={goToPrev} style={navBtnStyle}>
+            <button className="btn-tap" onClick={goToPrev} style={navBtnStyle}>
               <FiChevronLeft style={{ color: '#fff', fontSize: 17 }} />
-            </motion.button>
+            </button>
 
             <AnimatePresence mode="wait" custom={direction} initial={false}>
               <motion.h2
@@ -225,9 +225,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, isLoading: lo
               </motion.h2>
             </AnimatePresence>
 
-            <motion.button whileTap={{ scale: 0.82 }} onClick={goToNext} style={navBtnStyle}>
+            <button className="btn-tap" onClick={goToNext} style={navBtnStyle}>
               <FiChevronRight style={{ color: '#fff', fontSize: 17 }} />
-            </motion.button>
+            </button>
           </div>
 
           {/* Day-of-week labels */}
