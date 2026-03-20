@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { getTelegramWebApp, type TelegramUser, type TelegramWebApp } from '../lib/telegram';
 
 interface UseTelegramResult {
@@ -6,20 +7,32 @@ interface UseTelegramResult {
   initData: string;
   queryId: string | undefined;
   hapticFeedback: () => void;
+  hapticError: () => void;
   closeApp: () => void;
   expandApp: () => void;
 }
 
-export function useTelegram(): UseTelegramResult {
-  const tg = getTelegramWebApp();
+// Singleton — getTelegramWebApp() returns window.Telegram.WebApp which never changes.
+const tg = getTelegramWebApp();
 
-  return {
-    tg,
+export function useTelegram(): UseTelegramResult {
+  const hapticFeedback = useCallback(() => tg.HapticFeedback?.impactOccurred('light'), []);
+  const hapticError = useCallback(() => tg.HapticFeedback?.notificationOccurred('error'), []);
+  const closeApp = useCallback(() => tg.close(), []);
+  const expandApp = useCallback(() => tg.expand(), []);
+
+  const stableData = useMemo(() => ({
     user: tg.initDataUnsafe?.user,
     initData: tg.initData,
     queryId: tg.initDataUnsafe?.query_id,
-    hapticFeedback: () => tg.HapticFeedback?.impactOccurred('light'),
-    closeApp: () => tg.close(),
-    expandApp: () => tg.expand(),
+  }), []);
+
+  return {
+    tg,
+    ...stableData,
+    hapticFeedback,
+    hapticError,
+    closeApp,
+    expandApp,
   };
 }

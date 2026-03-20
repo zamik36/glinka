@@ -5,6 +5,7 @@ glinka-ht.ru {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         Content-Security-Policy "frame-ancestors 'self' https://web.telegram.org"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
     }
 
     handle /api/* {
@@ -39,6 +40,7 @@ stage.glinka-ht.ru {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         Content-Security-Policy "frame-ancestors 'self' https://web.telegram.org"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
     }
 
     handle /api/* {

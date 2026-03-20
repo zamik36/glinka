@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
-    BOT_TOKEN: str = ""
+    BOT_TOKEN: str
     DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/homework_db"
     DEBUG: bool = False
     ALLOWED_ORIGIN: str = ""
@@ -11,6 +11,6 @@ class Settings(BaseSettings):
     FALLBACK_SYNC_INTERVAL: int = 60
     WORKER_CONCURRENCY: int = 10
     TASK_CACHE_TTL_SECONDS: int = 30
-    INIT_DATA_TTL: int = 86400
+    INIT_DATA_TTL: int = 300
 
 settings = Settings()

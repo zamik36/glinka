@@ -311,5 +311,5 @@ body {
 
 /* CSS containment for task cards — isolates layout/paint per card */
 .task-card {
-  contain: content;
+  contain: paint style;
 }
