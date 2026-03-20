@@ -13,4 +13,4 @@ class Settings(BaseSettings):
     TASK_CACHE_TTL_SECONDS: int = 30
     INIT_DATA_TTL: int = 300
 
-settings = Settings()
+settings = Settings()  # type: ignore[missing-argument]
