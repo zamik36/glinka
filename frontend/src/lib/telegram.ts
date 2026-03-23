@@ -13,6 +13,7 @@ interface TelegramInitDataUnsafe {
 
 interface TelegramHapticFeedback {
   impactOccurred(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'): void;
+  notificationOccurred(type: 'error' | 'success' | 'warning'): void;
 }
 
 export interface TelegramWebApp {

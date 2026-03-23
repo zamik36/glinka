@@ -71,7 +71,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             docker network create web 2>/dev/null || true
-            cd ${{ secrets.VPS_PROJECT_PATH }}
+            cd "${{ secrets.VPS_PROJECT_PATH }}"
+            git config --global safe.directory "${{ secrets.VPS_PROJECT_PATH }}"
             git pull origin main
             docker compose build
             docker compose run --rm migrate
@@ -93,7 +94,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             docker network create web 2>/dev/null || true
-            cd ${{ secrets.VPS_STAGE_PATH }}
+            cd "${{ secrets.VPS_STAGE_PATH }}"
+            git config --global safe.directory "${{ secrets.VPS_STAGE_PATH }}"
             git pull origin dev
             docker compose -f docker-compose.yml -f docker-compose.stage.yml build
             docker compose -f docker-compose.yml -f docker-compose.stage.yml run --rm migrate

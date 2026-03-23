@@ -6,7 +6,6 @@ import {
   eachDayOfInterval,
   isSameDay,
   format,
-  subHours,
   addMonths,
   subMonths,
   getDay,
@@ -59,8 +58,8 @@ const DayCell = memo<DayCellProps>(function DayCell({ day, isToday, isSelected, 
   const isWeekend = getMondayIndex(day) >= 5;
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.84 }}
+    <button
+      className="btn-tap-sm"
       onClick={() => onSelect(day)}
       style={{
         height: 44,
@@ -106,7 +105,7 @@ const DayCell = memo<DayCellProps>(function DayCell({ day, isToday, isSelected, 
           ))}
         </div>
       )}
-    </motion.button>
+    </button>
   );
 });
 
@@ -207,9 +206,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, isLoading: lo
         }}>
           {/* Month navigator */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <motion.button whileTap={{ scale: 0.82 }} onClick={goToPrev} style={navBtnStyle}>
+            <button className="btn-tap" onClick={goToPrev} style={navBtnStyle}>
               <FiChevronLeft style={{ color: '#fff', fontSize: 17 }} />
-            </motion.button>
+            </button>
 
             <AnimatePresence mode="wait" custom={direction} initial={false}>
               <motion.h2
@@ -226,9 +225,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, isLoading: lo
               </motion.h2>
             </AnimatePresence>
 
-            <motion.button whileTap={{ scale: 0.82 }} onClick={goToNext} style={navBtnStyle}>
+            <button className="btn-tap" onClick={goToNext} style={navBtnStyle}>
               <FiChevronRight style={{ color: '#fff', fontSize: 17 }} />
-            </motion.button>
+            </button>
           </div>
 
           {/* Day-of-week labels */}
@@ -342,7 +341,14 @@ interface TaskCardProps { task: Task; index: number; }
 
 const TaskCard = memo<TaskCardProps>(function TaskCard({ task, index }) {
   const deadline    = useMemo(() => new Date(task.deadline), [task.deadline]);
-  const reminderTime = useMemo(() => subHours(deadline, 2), [deadline]);
+  const reminderTime = useMemo(() => {
+    if (!task.reminders?.length) return null;
+    const now = Date.now();
+    const pending = task.reminders
+      .filter(r => r.status === 'pending' && new Date(r.remind_at).getTime() > now)
+      .sort((a, b) => new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime());
+    return pending.length > 0 ? new Date(pending[0].remind_at) : null;
+  }, [task.reminders]);
   const overdue     = !task.is_completed && isPast(deadline);
   const statusColor = task.is_completed ? 'var(--success)' : overdue ? 'var(--danger)' : 'var(--accent)';
   const statusLabel = task.is_completed ? 'Готово' : overdue ? 'Просрочено' : 'Активно';
@@ -402,14 +408,14 @@ const TaskCard = memo<TaskCardProps>(function TaskCard({ task, index }) {
           timeColor={overdue ? 'var(--danger)' : 'var(--text-primary)'}
         />
 
-        {!task.is_completed && (
+        {!task.is_completed && reminderTime && (
           <>
             <div style={{ width: 1, background: 'var(--border-light)', alignSelf: 'stretch' }} />
             <TimeBlock
               icon={<FiClock style={{ fontSize: 11, color: 'var(--text-muted)' }} />}
               iconBg="rgba(108,92,231,0.06)"
               label="Напоминание"
-              time={format(reminderTime, 'HH:mm')}
+              time={format(reminderTime, 'd MMM, HH:mm', { locale: ru })}
               timeColor="var(--text-secondary)"
             />
           </>

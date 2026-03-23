@@ -13,3 +13,19 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
+
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: db:5432
+    database: homework_db
+    user: grafana_reader
+    secureJsonData:
+      password: $GRAFANA_PG_PASSWORD
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 5
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1600
+    editable: false

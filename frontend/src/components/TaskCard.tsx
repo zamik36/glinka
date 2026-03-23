@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef, memo } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow, isPast, format } from 'date-fns';
@@ -97,13 +97,14 @@ type TaskCardProps = {
   index: number;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: number) => void;
-  onToggleComplete?: (taskId: number, value: boolean) => void;
+  onToggleComplete?: (taskId: number, value: boolean) => Promise<void>;
+  onView?: (task: Task) => void;
   /** Called with fixed screen coords of the checkbox center right when user clicks */
   onConfettiTrigger?: (x: number, y: number) => void;
 };
 
 export const TaskCard: React.FC<TaskCardProps> = memo(({
-  task, index, onEdit, onDelete, onToggleComplete, onConfettiTrigger,
+  task, index, onEdit, onDelete, onToggleComplete, onConfettiTrigger, onView,
 }) => {
   const deadlineDate = useMemo(() => new Date(task.deadline), [task.deadline]);
   const isOverdue    = !task.is_completed && isPast(deadlineDate) && task.reminder_status !== 'sent';
@@ -134,35 +135,68 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
 
   const attachmentCount = task.attachments?.length ?? 0;
 
+  const nextReminderText = useMemo(() => {
+    if (task.is_completed || !task.reminders?.length) return null;
+    const now = Date.now();
+    const pending = task.reminders
+      .filter(r => r.status === 'pending' && new Date(r.remind_at).getTime() > now)
+      .sort((a, b) => new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime());
+    if (!pending.length) return null;
+    try { return format(new Date(pending[0].remind_at), 'd MMM, HH:mm', { locale: ru }); }
+    catch { return null; }
+  }, [task.is_completed, task.reminders]);
+
   const [showRing, setShowRing]       = useState(false);
   const [checkBounce, setCheckBounce] = useState(false);
   const checkboxRef                   = useRef<HTMLDivElement>(null);
+  const isTogglingRef                 = useRef(false);
+  const pendingTimers                 = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const onToggleCompleteRef           = useRef(onToggleComplete);
+  onToggleCompleteRef.current = onToggleComplete;
+
+  useEffect(() => {
+    const timers = pendingTimers.current;
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, []);
 
   const handleCheckboxClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isTogglingRef.current) return;
+    isTogglingRef.current = true;
     const becomingComplete = !task.is_completed;
 
+    // Visual effects start immediately
     if (becomingComplete) {
-      // Capture position and hand off to parent — parent owns the lifetime
       const rect = checkboxRef.current?.getBoundingClientRect();
       const ox = rect ? rect.left + rect.width / 2 : 0;
       const oy = rect ? rect.top + rect.height / 2 : 0;
       onConfettiTrigger?.(ox, oy);
       setCheckBounce(true);
-      setTimeout(() => setCheckBounce(false), 600);
-      setTimeout(() => onToggleComplete?.(task.id, becomingComplete), 650);
+      const id = setTimeout(() => setCheckBounce(false), 600);
+      pendingTimers.current.push(id);
     } else {
       setShowRing(true);
-      setTimeout(() => setShowRing(false), 550);
-      setTimeout(() => onToggleComplete?.(task.id, becomingComplete), 200);
+      const id = setTimeout(() => setShowRing(false), 550);
+      pendingTimers.current.push(id);
     }
-  }, [task.id, task.is_completed, onToggleComplete, onConfettiTrigger]);
+
+    // Toggle fires immediately — it coordinates API + animation delay via Promise.all
+    const result = onToggleCompleteRef.current?.(task.id, becomingComplete);
+    if (result && typeof result.then === 'function') {
+      result.finally(() => { isTogglingRef.current = false; });
+    } else {
+      isTogglingRef.current = false;
+    }
+  }, [task.id, task.is_completed, onConfettiTrigger]);
 
   return (
     <article
-      className="mb-3 relative animate-card-in"
+      className="task-card mb-3 relative"
+      onClick={() => onView?.(task)}
       style={{
-        animationDelay: `${index * 0.06}s`,
+        cursor: onView ? 'pointer' : undefined,
         borderRadius: 20,
         background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.87) 100%)',
         border: '1px solid rgba(255,255,255,0.65)',
@@ -297,6 +331,12 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 {relativeText}
               </span>
             )}
+            {nextReminderText && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#A29BFE', fontSize: 11, fontWeight: 500 }}>
+                <FiBell size={10} />
+                <span>{nextReminderText}</span>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -308,8 +348,8 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
             )}
 
             {onEdit && (
-              <motion.button
-                whileTap={{ scale: 0.82, transition: { duration: 0.1 } }}
+              <button
+                className="btn-tap"
                 onClick={(e) => { e.stopPropagation(); onEdit(task); }}
                 aria-label="Редактировать"
                 style={{
@@ -322,12 +362,12 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 }}
               >
                 <FiEdit2 size={13} />
-              </motion.button>
+              </button>
             )}
 
             {onDelete && (
-              <motion.button
-                whileTap={{ scale: 0.82, transition: { duration: 0.1 } }}
+              <button
+                className="btn-tap"
                 onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
                 aria-label="Удалить"
                 style={{
@@ -340,7 +380,7 @@ export const TaskCard: React.FC<TaskCardProps> = memo(({
                 }}
               >
                 <FiTrash2 size={13} />
-              </motion.button>
+              </button>
             )}
           </div>
         </div>

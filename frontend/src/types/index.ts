@@ -5,6 +5,12 @@ export interface Attachment {
   size: number;
 }
 
+export interface Reminder {
+  id: number;
+  remind_at: string;
+  status: 'pending' | 'sent';
+}
+
 export interface Task {
   id: number;
   text: string;
@@ -12,6 +18,7 @@ export interface Task {
   is_completed: boolean;
   reminder_status: 'pending' | 'sent' | null;
   attachments: Attachment[];
+  reminders: Reminder[];
 }
 
 export interface TaskCreateRequest {

@@ -21,6 +21,11 @@ class AttachmentResponse(BaseModel):
     mime_type: str
     size: int
 
+class ReminderResponse(BaseModel):
+    id: int
+    remind_at: datetime
+    status: str
+
 class TaskResponse(BaseModel):
     id: int
     text: str
@@ -29,6 +34,7 @@ class TaskResponse(BaseModel):
     created_at: datetime
     reminder_status: Optional[Literal["pending", "sent"]] = None
     attachments: list[AttachmentResponse] = []
+    reminders: list[ReminderResponse] = []
 
 def _parse_reminder_times(raw: list[str]) -> list[datetime]:
     now = datetime.now(timezone.utc)
@@ -90,7 +96,9 @@ async def create_task(
     return {"status": "success", "task_id": task.id}
 
 @router.put("/{task_id}")
+@limiter.limit("20/minute")
 async def update_task(
+    request: Request,
     task_id: int,
     text: str = Form(..., min_length=1, max_length=2000),
     deadline: str = Form(...),
@@ -117,7 +125,9 @@ async def update_task(
 
 
 @router.delete("/{task_id}")
+@limiter.limit("20/minute")
 async def delete_task(
+    request: Request,
     task_id: int,
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
@@ -133,7 +143,9 @@ class CompletePayload(BaseModel):
 
 
 @router.patch("/{task_id}/complete")
+@limiter.limit("30/minute")
 async def toggle_task_complete(
+    request: Request,
     task_id: int,
     payload: CompletePayload,
     user_id: int = Depends(get_current_user),
@@ -146,7 +158,9 @@ async def toggle_task_complete(
 
 
 @router.get("", response_model=list[TaskResponse])
+@limiter.limit("60/minute")
 async def get_tasks(
+    request: Request,
     user_id: int = Depends(get_current_user),
     service: TaskService = Depends(get_task_service),
     limit: int = 50,

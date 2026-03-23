@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, startTransition } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect, startTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import type { Task } from '../types';
@@ -45,14 +45,23 @@ type TaskListProps = {
   isLoading: boolean;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onEdit?: (task: Task) => void;
+  onView?: (task: Task) => void;
 };
 
-export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) {
+export const TaskList = React.memo(function TaskList({ tasks, isLoading, setTasks, onEdit, onView }: TaskListProps) {
   const [filter, setFilter] = useState<Filter>('active');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [confettiBursts, setConfettiBursts] = useState<{ id: number; x: number; y: number }[]>([]);
   const burstCounter = useRef(0);
-  const { tg, hapticFeedback } = useTelegram();
+  const confettiTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const { tg, hapticFeedback, hapticError } = useTelegram();
+
+  useEffect(() => {
+    const timers = confettiTimers.current;
+    return () => { timers.forEach(clearTimeout); };
+  }, []);
+  // Stable index per task id — prevents memo invalidation & CSS animation restarts
+  const taskIndexMap = useRef(new Map<number, number>());
 
   const handleDelete = useCallback((taskId: number) => {
     tg.showConfirm('Удалить задание?', async (confirmed: boolean) => {
@@ -71,19 +80,20 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
   const handleConfettiTrigger = useCallback((x: number, y: number) => {
     const id = ++burstCounter.current;
     setConfettiBursts(prev => [...prev, { id, x, y }]);
-    setTimeout(() => setConfettiBursts(prev => prev.filter(b => b.id !== id)), 4000);
+    const timerId = setTimeout(() => setConfettiBursts(prev => prev.filter(b => b.id !== id)), 4000);
+    confettiTimers.current.push(timerId);
   }, []);
 
   const handleToggleComplete = useCallback(async (taskId: number, value: boolean) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     hapticFeedback();
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: value } : t));
     try {
       await api.toggleComplete(taskId, value);
-    } catch (error) {
-      console.error('Toggle failed:', error instanceof Error ? error.message : 'Unknown error');
+    } catch {
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !value } : t));
+      hapticError();
     }
-  }, [hapticFeedback, setTasks]);
+  }, [hapticFeedback, hapticError, setTasks]);
 
   const changeFilter = useCallback((f: Filter) => {
     startTransition(() => setFilter(f));
@@ -99,20 +109,14 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
       else active.push(t);
     }
     // Sort active: tasks with sent reminders appear before pending ones.
-    // Precompute rank + deadline ms to avoid repeated allocations in comparator.
-    type Keyed = { task: Task; rank: number; deadlineMs: number };
-    const keyed: Keyed[] = active.map(t => ({
-      task: t,
-      rank: t.reminder_status === 'sent' ? 0 : 1,
-      deadlineMs: new Date(t.deadline).getTime(),
-    }));
-    keyed.sort((a, b) => a.rank - b.rank || a.deadlineMs - b.deadlineMs);
-    active.length = 0;
-    for (const k of keyed) active.push(k.task);
-    const map: Record<Filter, Task[]> = { active, done, overdue };
+    const sortedActive = active
+      .map(t => ({ task: t, rank: t.reminder_status === 'sent' ? 0 : 1, ms: new Date(t.deadline).getTime() }))
+      .sort((a, b) => a.rank - b.rank || a.ms - b.ms)
+      .map(k => k.task);
+    const map: Record<Filter, Task[]> = { active: sortedActive, done, overdue };
     return {
       overdueCount: overdue.length,
-      activeCount: active.length,
+      activeCount: sortedActive.length,
       doneCount: done.length,
       filteredTasks: map[filter],
     };
@@ -151,11 +155,9 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
           {statTabs.map(tab => {
             const isActive = filter === tab.key;
             return (
-              <motion.button
+              <button
                 key={tab.key}
                 onClick={() => changeFilter(tab.key)}
-                animate={{ scale: isActive ? 1.03 : 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className="flex-1 text-center"
                 style={{
                   background: isActive ? tab.activeBg : tab.bg,
@@ -164,14 +166,13 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
                   border: isActive ? `1.5px solid ${tab.color}44` : '1.5px solid transparent',
                   cursor: 'pointer',
                   opacity: isActive ? 1 : 0.65,
-                  transition: 'background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  transform: isActive ? 'scale(1.03)' : 'scale(1)',
+                  transition: 'background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
                 }}
               >
                 <p className="text-[22px] font-bold leading-none mb-0.5" style={{ color: tab.color }}>{tab.count}</p>
                 <p className="text-[11px] font-semibold" style={{ color: tab.color + 'BB' }}>{tab.label}</p>
-              </motion.button>
+              </button>
             );
           })}
         </motion.div>
@@ -214,33 +215,37 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <AnimatePresence>
-              {filteredTasks.slice(0, visibleCount).map((task, i) => (
-                <motion.div
-                  key={task.id}
-                  layout
-                  exit={{
-                    height: 0,
-                    marginBottom: 0,
-                    opacity: 0,
-                    transition: {
-                      height:       { duration: 0.45, ease: 'easeInOut' },
-                      marginBottom: { duration: 0.45, ease: 'easeInOut' },
-                      opacity:      { duration: 0.25, ease: 'easeIn' },
-                    },
-                  }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <TaskCard
-                    task={task}
-                    index={Math.min(i, 11)}
-                    onEdit={onEdit}
-                    onDelete={handleDelete}
-                    onToggleComplete={handleToggleComplete}
-                    onConfettiTrigger={handleConfettiTrigger}
-                  />
-                </motion.div>
-              ))}
+            <AnimatePresence mode="popLayout" initial={false}>
+              {filteredTasks.slice(0, visibleCount).map((task, i) => {
+                // Stable index: assigned once per task id, never changes on reorder
+                if (!taskIndexMap.current.has(task.id)) {
+                  taskIndexMap.current.set(task.id, Math.min(i, 5));
+                }
+                const stableIdx = taskIndexMap.current.get(task.id)!;
+                return (
+                  <motion.div
+                    key={task.id}
+                    layout="position"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{
+                      opacity: { duration: 0.2, ease: 'easeOut' },
+                      layout: { type: 'spring', stiffness: 500, damping: 35 },
+                    }}
+                  >
+                    <TaskCard
+                      task={task}
+                      index={stableIdx}
+                      onEdit={onEdit}
+                      onDelete={handleDelete}
+                      onToggleComplete={handleToggleComplete}
+                      onConfettiTrigger={handleConfettiTrigger}
+                      onView={onView}
+                    />
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
 
             {filteredTasks.length > visibleCount && (
@@ -291,4 +296,4 @@ export function TaskList({ tasks, isLoading, setTasks, onEdit }: TaskListProps) 
       ))}
     </div>
   );
-}
+});
