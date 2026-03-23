@@ -3,6 +3,8 @@
 #
 # Disables caddy (prod Caddy handles stage.glinka-ht.ru),
 # disables monitoring stack, uses separate volumes.
+
+
 services:
   db:
     volumes:
